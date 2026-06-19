@@ -61,8 +61,8 @@ export function App() {
           </a>
         </div>
         <p className="microcopy">
-          20 minutes, no pitch deck. We'll tell you straight whether we can help —
-          and what we'd fix first.
+          20 minutes, no pitch deck. You'll leave with a prioritized fix-list for
+          your top 3 reliability risks — yours to keep even if you never hire us.
         </p>
       </section>
 
@@ -287,8 +287,10 @@ export function App() {
       <section className="band book" id="book">
         <h2>Book a 20-minute pipeline discovery call</h2>
         <p className="band-lead">
-          We'll look at your stack, tell you where the risk is, and whether we're
-          the right team to own it. No pitch deck, no obligation.
+          In 20 minutes you'll walk away with a prioritized fix-list for your top 3
+          pipeline reliability risks — yours to keep even if you never hire us. We'll
+          also tell you straight whether we're the right team to own it. No pitch
+          deck, no obligation.
         </p>
         <FounderCard />
         <BookingEmbed source="primary-section" />

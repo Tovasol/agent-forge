@@ -27,7 +27,10 @@ export const CONTACT_EMAIL =
   (import.meta.env.VITE_CONTACT_EMAIL || "hello@pipelineforge.io").trim();
 
 // Display name of the booking call, used in CTA copy and analytics.
-export const DISCOVERY_CALL_LABEL = "Book a 20-min discovery call";
+// First-person, outcome-specific phrasing (HubSpot data: personalized/first-person
+// CTAs outperform generic second-person). Kept identical across topbar, hero,
+// pricing, and footer so the page presents one unambiguous primary action.
+export const DISCOVERY_CALL_LABEL = "Book my 20-min discovery call";
 
 // Brand
 export const BRAND = "PipelineForge";
