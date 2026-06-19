@@ -16,6 +16,7 @@ import { requestGate, GateBlocked } from "./gates.js";
 import { BudgetExceeded } from "./budget.js";
 
 import { runResearchPhase } from "../agents/research.js";
+import { status } from "./status.js";
 import { runDecidePhase } from "../agents/decide.js";
 import { runBuildPhase } from "../agents/build.js";
 import { runDeployPhase } from "../agents/deploy.js";
@@ -59,9 +60,11 @@ export async function runLoop(cfg: ForgeConfig, target: Phase | "all") {
     }
 
     log.info("loop", `▶ Phase: ${phase}`);
+    status.start(phase, `Running ${phase}…`);
     try {
       await RUNNERS[phase](cfg);
       markPhaseComplete(loadState(), phase);
+      status.note(`✓ ${phase} complete`);
       log.ok("loop", `✓ Phase complete: ${phase}`);
     } catch (err) {
       if (err instanceof GateBlocked) {

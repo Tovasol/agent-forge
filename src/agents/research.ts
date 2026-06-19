@@ -42,6 +42,7 @@ async function plan(cfg: ForgeConfig): Promise<WorkerSpec[]> {
     cfg,
     model: cfg.models.lead,
     systemPrompt: prompt("orchestrator"),
+    label: "research:plan",
     permissionMode: "plan",
     allowedTools: ["WebSearch", "WebFetch"],
     prompt:
@@ -80,6 +81,7 @@ async function runWorker(cfg: ForgeConfig, spec: WorkerSpec): Promise<Finding> {
     cfg,
     model: cfg.models.worker,
     systemPrompt: prompt("worker"),
+    label: "research:worker",
     permissionMode: "plan",
     allowedTools: ["WebSearch", "WebFetch"],
     prompt: ask,
@@ -128,6 +130,7 @@ async function critique(cfg: ForgeConfig, findings: Finding[]) {
     cfg,
     model: cfg.models.lead,
     systemPrompt: prompt("critic"),
+    label: "research:critic",
     permissionMode: "plan",
     allowedTools: [],
     prompt:
@@ -167,6 +170,7 @@ async function synthesize(cfg: ForgeConfig, findings: Finding[], saturationNote:
       cfg,
       model: cfg.models.lead,
       systemPrompt: prompt("synthesizer"),
+      label: "research:synthesize",
       permissionMode: "plan",
       allowedTools: [],
       prompt:

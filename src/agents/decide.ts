@@ -21,6 +21,7 @@ async function decide(cfg: ForgeConfig, findings: Finding[]): Promise<Decision[]
     cfg,
     model: cfg.models.lead,
     systemPrompt: prompt("decider"),
+    label: "decide:options",
     permissionMode: "plan",
     allowedTools: ["WebSearch", "WebFetch"],
     prompt:
@@ -47,6 +48,7 @@ async function critique(cfg: ForgeConfig, decisions: Decision[]) {
     cfg,
     model: cfg.models.lead,
     systemPrompt: prompt("critic"),
+    label: "decide:critic",
     permissionMode: "plan",
     allowedTools: [],
     prompt:

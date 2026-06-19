@@ -63,11 +63,13 @@ This file tracks what's been built into Agent Forge across sessions, so any futu
 - Verified: novelty detection flags zero-new-info rounds; round 0 never auto-saturates; source ledger dedups + persists to disk.
 
 ### Live visibility (dashboard + persistent logs + streaming activity)
+- UNIVERSAL: feedback is baked into the agent runner, so EVERY phase (research, decide, build, deploy, optimize, all venture stages, growth) streams activity — not just research. Each call carries a `label` so activity is attributed to the right step.
+- Heartbeat: a pulse every 5s with elapsed seconds + last action, so even a silent "thinking" phase visibly shows it's alive (no more frozen-looking terminal between log lines).
+- Streaming tool activity: each search/fetch/file-write/thinking turn emits a live line (🔍/🌐/⚙/💭).
 - Persistent disk logs: every run writes `memory/logs/latest.log` (+ timestamped per-run file). `tail -f memory/logs/latest.log` for a live feed.
-- Streaming tool activity: each web search/fetch a worker runs emits a live line (🔍 search: "…"), filling the long silent gaps so progress is visible.
-- Status snapshot: `memory/status.json` tracks phase + the research fan-out tree (facet state, search count, claim count) + spend + recent activity.
-- Live dashboard: `npm run dash` renders the fan-out tree, spinner, elapsed, spend, and streaming activity, redrawing each second. Decoupled from the engine — run in a second terminal, attach/detach anytime.
-- Verified: status round-trips; dashboard frame renders tree/activity/spend; logs persist.
+- Status snapshot: `memory/status.json` tracks current phase, the research fan-out tree (facet state/searches/claims), spend, and recent activity. Facets clear on phase change.
+- Live dashboard: `npm run dash` renders the fan-out tree (research) or a Working spinner + heartbeat (other phases), with streaming activity, redrawing each second. Decoupled from the engine — run in a second terminal, attach/detach anytime; flags "no update >90s".
+- Verified: status round-trips; dashboard renders for research AND non-research phases; phase transitions clear stale facets; logs persist.
 
 ### Known follow-ups (not yet built)
 - Cloudflare Cron Trigger Worker to run `grow` on a schedule in your own infra

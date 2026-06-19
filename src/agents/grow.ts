@@ -63,6 +63,7 @@ async function runPlanner(cfg: ForgeConfig, backlog: BacklogTask[]) {
       cfg,
       model: cfg.models.lead,
       systemPrompt: prompt("planner"),
+      label: "grow:plan",
       permissionMode: "plan",
       allowedTools: ["WebSearch", "WebFetch"],
       prompt:
@@ -166,6 +167,7 @@ async function runPreparer(cfg: ForgeConfig, task: BacklogTask) {
     cfg,
     model: task.channel === "content" ? cfg.models.lead : cfg.models.worker,
     systemPrompt: prompt("preparer"),
+    label: "grow:prepare",
     permissionMode: "plan",
     allowedTools: ["WebSearch", "WebFetch", "Read", "Glob", "Grep"],
     prompt:

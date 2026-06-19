@@ -10,6 +10,7 @@
 
 import type { ForgeConfig } from "./types.js";
 import { log } from "./log.js";
+import { status } from "../harness/status.js";
 
 export interface RunOptions {
   systemPrompt: string;
@@ -25,6 +26,9 @@ export interface RunOptions {
   maxTurns?: number;
   /** Live tool-activity callback (searches/fetches as the agent streams). */
   onActivity?: (a: { kind: string; detail: string }) => void;
+  /** Short label for this step (e.g. "decide", "build", "stage:beachhead") so
+   *  universal log/status/heartbeat feedback can attribute activity to it. */
+  label?: string;
 }
 
 export interface RunResult {
@@ -160,6 +164,26 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
     let costUsd: number | undefined;
     let raw: unknown;
 
+    // Universal feedback: every agent call (not just research) reports activity.
+    const label = opts.label ?? "agent";
+    const startedAt = Date.now();
+    let lastBeatMsg = "";
+    // Heartbeat so even a silent "thinking" phase shows it's alive on the
+    // dashboard and in the log, with elapsed seconds.
+    const beat = setInterval(() => {
+      const secs = Math.round((Date.now() - startedAt) / 1000);
+      const msg = lastBeatMsg || "working…";
+      status.note(`${label}: ${msg} (${secs}s)`);
+    }, 5000);
+
+    const emitActivity = (a: { kind: string; detail: string }) => {
+      const icon = a.kind === "search" ? "🔍" : a.kind === "fetch" ? "🌐" : a.kind === "thinking" ? "💭" : "⚙";
+      lastBeatMsg = `${a.kind}${a.detail ? ": " + a.detail : ""}`;
+      log.activity(label, `${icon} ${a.kind}${a.detail ? ": " + a.detail : ""}`);
+      status.activity(`[${label}] ${icon} ${a.kind}${a.detail ? ": " + a.detail : ""}`);
+      if (opts.onActivity) opts.onActivity(a);
+    };
+
     const stream = query({
       prompt: opts.prompt,
       options: {
@@ -176,24 +200,33 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
       },
     });
 
-    for await (const message of stream) {
-      if (message.type === "assistant") {
-        turns++;
-        const content = message.message?.content ?? [];
-        for (const block of content) {
-          if (block.type === "text") text += block.text;
-          // Surface tool activity live so long silent worker runs show progress.
-          else if (block.type === "tool_use" && opts.onActivity) {
-            opts.onActivity(describeToolUse(block));
+    try {
+      for await (const message of stream) {
+        if (message.type === "assistant") {
+          turns++;
+          const content = message.message?.content ?? [];
+          let sawText = false;
+          for (const block of content) {
+            if (block.type === "text") {
+              text += block.text;
+              sawText = true;
+            } else if (block.type === "tool_use") {
+              emitActivity(describeToolUse(block));
+            }
+          }
+          // A turn with reasoning/text but no tool call: pulse so long non-tool
+          // phases (decide, synthesize, profile) aren't silent.
+          if (sawText) emitActivity({ kind: "thinking", detail: `turn ${turns}` });
+        } else if (message.type === "result") {
+          raw = message;
+          costUsd = message.total_cost_usd ?? message.cost_usd;
+          if (message.result && typeof message.result === "string") {
+            text = message.result;
           }
         }
-      } else if (message.type === "result") {
-        raw = message;
-        costUsd = message.total_cost_usd ?? message.cost_usd;
-        if (message.result && typeof message.result === "string") {
-          text = message.result;
-        }
       }
+    } finally {
+      clearInterval(beat);
     }
 
     return { text, turns, costUsd, raw };

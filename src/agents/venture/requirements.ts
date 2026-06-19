@@ -84,6 +84,7 @@ export async function buildRequirements(cfg: ForgeConfig): Promise<CapabilityReq
       cfg,
       model: cfg.models.lead,
       systemPrompt: prompt("needs-analyst"),
+      label: "requirements",
       permissionMode: "plan",
       allowedTools: ["WebSearch", "WebFetch"],
       prompt:

@@ -8,6 +8,7 @@ import type { VentureState, StageId } from "../../lib/venture-types.js";
 import { STAGE_ORDER } from "../../lib/venture-types.js";
 import { STAGES, nextStage } from "../../lib/stages.js";
 import { log } from "../../lib/log.js";
+import { status } from "../../harness/status.js";
 import {
   loadVenture,
   saveVenture,
@@ -59,6 +60,7 @@ export async function driveVenture(cfg: ForgeConfig): Promise<void> {
   while (current) {
     const def = STAGES[current];
     log.info("venture", `▶ Stage: ${def.id} — ${def.title}`);
+    status.start(`venture:${def.id}`, def.title);
 
     // Before building, run the needs-first requirements analysis so the
     // operator knows exactly what success depends on and what's already covered.

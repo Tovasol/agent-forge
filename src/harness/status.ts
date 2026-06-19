@@ -64,6 +64,8 @@ function write(s: EngineStatus) {
 export const status = {
   start(phase: string, note = "") {
     const s = read();
+    // New phase: clear the research fan-out tree unless we're (re)entering research.
+    if (s.phase !== phase && !phase.startsWith("research")) s.facets = [];
     s.phase = phase;
     s.startedAt = new Date().toISOString();
     s.note = note;

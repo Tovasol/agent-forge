@@ -47,12 +47,10 @@ function frame(s: EngineStatus, tick: number): string {
   if (s.note) lines.push(`  ${C.dim}${s.note.slice(0, W - 4)}${C.reset}`);
   lines.push("");
 
-  // Fan-out tree
-  const done = s.facets.filter((f) => f.state === "done").length;
-  lines.push(`  ${C.bold}Research fan-out${C.reset} ${C.dim}(${done}/${s.facets.length} facets done)${C.reset}`);
-  if (!s.facets.length) {
-    lines.push(`    ${C.dim}…planning…${C.reset}`);
-  } else {
+  // Fan-out tree (research) — or a generic working indicator for other phases.
+  if (s.facets.length) {
+    const done = s.facets.filter((f) => f.state === "done").length;
+    lines.push(`  ${C.bold}Research fan-out${C.reset} ${C.dim}(${done}/${s.facets.length} facets done)${C.reset}`);
     s.facets.forEach((f, i) => {
       const branch = i === s.facets.length - 1 ? "└─" : "├─";
       const meta =
@@ -65,6 +63,9 @@ function frame(s: EngineStatus, tick: number): string {
               : `${C.dim}queued${C.reset}`;
       lines.push(`    ${branch} ${icon(f.state, tick)} ${f.title.slice(0, 34).padEnd(34)} ${meta}`);
     });
+  } else {
+    const spin = stale ? `${C.red}■${C.reset}` : `${C.yellow}${SPIN[tick % SPIN.length]}${C.reset}`;
+    lines.push(`  ${C.bold}Working${C.reset}  ${spin} ${C.dim}${s.note || "…"}${C.reset}`);
   }
   lines.push("");
 

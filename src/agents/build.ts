@@ -30,6 +30,7 @@ export async function runBuildPhase(cfg: ForgeConfig): Promise<void> {
     cfg,
     model: cfg.models.lead,
     systemPrompt: prompt("builder"),
+    label: "build",
     permissionMode: "acceptEdits",
     cwd: siteDir,
     allowedTools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
