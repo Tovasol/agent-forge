@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.log
+memory/findings/*.json
+memory/decisions/*.json
+memory/runs/
+!memory/findings/.gitkeep
+!memory/decisions/.gitkeep
+.DS_Store
+site/build/
+.wrangler/
+context/*
+!context/README.md
+!context/assets.example.txt

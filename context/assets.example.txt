@@ -1,0 +1,13 @@
+# Rename to assets.txt and edit. List what you own / can use.
+
+Google Workspace (business email, Calendar, Sheets, Docs, Forms, Meet)
+Cloudflare account (Workers, Pages, D1, R2, DNS)
+GitHub account
+A registered domain I'm not using yet
+Stripe account
+Small LinkedIn presence (~800 connections, mostly data engineers)
+
+# Constraints (optional but useful):
+~10 hours/week to start
+Budget I can afford to lose: $300
+Based in the US

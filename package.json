@@ -1,0 +1,51 @@
+{
+  "name": "agent-forge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A persistent, self-correcting agent loop that researches, decides, builds, and optimizes a lead-magnet business on top of Claude.",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "bin": {
+    "forge": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "forge": "tsx src/cli.ts",
+    "research": "npm run forge -- run --phase research",
+    "decide": "npm run forge -- run --phase decide",
+    "site": "npm run forge -- run --phase build",
+    "deploy": "npm run forge -- run --phase deploy",
+    "optimize": "npm run forge -- run --phase optimize",
+    "all": "npm run forge -- run --phase all",
+    "grow": "npm run forge -- grow",
+    "backlog": "npm run forge -- backlog",
+    "approvals": "npm run forge -- approvals",
+    "attribution": "npm run forge -- attribution",
+    "watch": "npm run forge -- watch --interval 60",
+    "venture": "npm run forge -- venture",
+    "venture:resume": "npm run forge -- venture resume",
+    "venture:gates": "npm run forge -- venture gates",
+    "venture:context": "npm run forge -- venture context",
+    "venture:requirements": "npm run forge -- venture requirements",
+    "venture:status": "npm run forge -- venture status",
+    "status": "npm run forge -- status",
+    "doctor": "npm run forge -- doctor",
+    "resume": "npm run forge -- resume",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "dotenv": "^16.4.5",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
+    "typescript": "^5.6.2"
+  }
+}

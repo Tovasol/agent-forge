@@ -1,0 +1,26 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "pipelineforge-site"
+main = "worker/index.ts"
+compatibility_date = "2025-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets (the Vite build output).
+[assets]
+directory = "dist"
+binding = "ASSETS"
+
+# ── CRM via Google Sheets (set as secrets, not here) ──
+# wrangler secret put GOOGLE_SA_EMAIL
+# wrangler secret put GOOGLE_SA_KEY
+# Put the non-secret sheet id in vars:
+[vars]
+# CRM_SHEET_ID = "your-sheet-id"
+
+# ── Optional D1 fallback store ──
+# [[d1_databases]]
+# binding = "LEADS"
+# database_name = "leads"
+# database_id = "xxxxxxxx"
+
+# After `wrangler d1 create leads`, run the schema in worker/schema.sql:
+#   wrangler d1 execute leads --file=worker/schema.sql

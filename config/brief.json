@@ -1,0 +1,9 @@
+{
+  "businessName": "PipelineForge",
+  "niche": "done-for-you data pipeline service for mid-market B2B SaaS",
+  "icp": "Heads of Data and founding data engineers at 20–200 person B2B SaaS companies who need reliable ETL/ELT but can't justify a full data-infra hire",
+  "monthlyBudgetUsd": 50,
+  "services": ["React", "Cloudflare", "Google Workspace"],
+  "goal": "Launch a lead-magnet site that converts qualified data teams into discovery calls for a done-for-you data pipeline service, then iteratively optimize conversion.",
+  "notes": "Operator is a principal engineer who fulfills work orders manually after clients buy. Prefer frugal, reversible choices that compose with Cloudflare + Google Workspace."
+}
