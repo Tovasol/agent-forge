@@ -288,6 +288,15 @@ input:focus-visible {
   margin: 16px 0 0; max-width: 70ch;
 }
 
+/* Honest pre-launch fallback shown when no Cal.com slug is configured. */
+.booking-fallback {
+  width: 100%; border: 1px dashed var(--line); border-radius: 12px;
+  background: var(--panel); padding: 32px 24px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.booking-fallback-lead { color: var(--ink); font-size: 17px; max-width: 52ch; margin: 0; }
+.booking-fallback-note { font-family: var(--mono); font-size: 13px; color: var(--muted); margin: 0; }
+
 /* ── Founder card (named human beside the booking embed) ─────────────────── */
 .founder-card {
   display: flex; align-items: center; gap: 14px;

@@ -6,9 +6,25 @@
 //
 // HUMAN ACTION REQUIRED BEFORE LAUNCH: create the Cal.com event type and set
 // VITE_CAL_LINK in the Pages build env (e.g. "pipelineforge/discovery-call").
-// The fallback below is a PLACEHOLDER slug that will not resolve to a live
-// calendar — leaving it unset means the primary money CTA dead-ends.
-export const CAL_LINK = import.meta.env.VITE_CAL_LINK || "pipelineforge/discovery";
+//
+// IMPORTANT: there is intentionally NO placeholder-slug fallback. A placeholder
+// slug renders a broken, non-existent Cal.com calendar — a silent dead-end on
+// the venture's primary money CTA, which is strictly worse than rendering
+// nothing. Instead, when VITE_CAL_LINK is unset the booking UI degrades
+// gracefully (see HAS_CAL / BookingEmbed) exactly like the founder card: it
+// shows an honest "booking opening shortly" state with a working mailto path,
+// and never ships a broken calendar. The real booking goes live the moment a
+// human supplies the real slug — no code change required.
+export const CAL_LINK = (import.meta.env.VITE_CAL_LINK || "").trim();
+
+/** True only when a real Cal.com slug has been supplied at build time. */
+export const HAS_CAL = CAL_LINK.length > 0;
+
+// Fallback contact for the (rare) pre-launch window where the booking slug is
+// not yet configured, so the primary CTA still reaches a human instead of a
+// dead calendar. Operator-editable.
+export const CONTACT_EMAIL =
+  (import.meta.env.VITE_CONTACT_EMAIL || "hello@pipelineforge.io").trim();
 
 // Display name of the booking call, used in CTA copy and analytics.
 export const DISCOVERY_CALL_LABEL = "Book a 20-min discovery call";

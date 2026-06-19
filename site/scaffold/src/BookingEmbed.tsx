@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import Cal, { getCalApi } from "@calcom/embed-react";
-import { CAL_LINK } from "./config";
+import { CAL_LINK, HAS_CAL, CONTACT_EMAIL, DISCOVERY_CALL_LABEL } from "./config";
 import { track } from "./analytics";
 
 // Inline Cal.com discovery-call embed (booking-provider decision: Cal.com free
@@ -17,6 +17,20 @@ interface BookingEmbedProps {
 }
 
 export function BookingEmbed({ email, name, source = "unknown" }: BookingEmbedProps) {
+  // Graceful degradation: if no real Cal.com slug has been configured at build
+  // time, NEVER render a broken/placeholder calendar (a silent dead-end on the
+  // primary money CTA). Show an honest "opening shortly" state with a working
+  // mailto path so the visitor still reaches a human. Mirrors the founder card's
+  // env-gated behaviour. The live calendar appears automatically once a human
+  // sets VITE_CAL_LINK — no code change required.
+  if (!HAS_CAL) {
+    return <BookingFallback email={email} source={source} />;
+  }
+
+  return <CalEmbed email={email} name={name} source={source} />;
+}
+
+function CalEmbed({ email, name, source = "unknown" }: BookingEmbedProps) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -58,6 +72,39 @@ export function BookingEmbed({ email, name, source = "unknown" }: BookingEmbedPr
           layout: "month_view",
         }}
       />
+    </div>
+  );
+}
+
+// Honest pre-launch fallback shown when no real Cal.com slug is configured.
+// Keeps the primary CTA reaching a human (mailto) instead of a dead calendar.
+function BookingFallback({ email, source = "unknown" }: BookingEmbedProps) {
+  useEffect(() => {
+    track("booking_fallback_shown", { source });
+  }, [source]);
+
+  const subject = encodeURIComponent("Pipeline discovery call");
+  const body = encodeURIComponent(
+    email ? `Hi — I'd like to book a discovery call.\n\nMy email: ${email}` : "",
+  );
+  const mailto = `mailto:${CONTACT_EMAIL}?subject=${subject}${body ? `&body=${body}` : ""}`;
+
+  return (
+    <div className="booking-fallback" role="status">
+      <p className="booking-fallback-lead">
+        Online booking is opening shortly. In the meantime, email us and we'll
+        send you two times this week.
+      </p>
+      <a
+        className="cta cta-primary"
+        href={mailto}
+        onClick={() => track("booking_fallback_email_click", { source })}
+      >
+        {DISCOVERY_CALL_LABEL} →
+      </a>
+      <p className="booking-fallback-note">
+        We usually reply within one business day.
+      </p>
     </div>
   );
 }
