@@ -17,8 +17,10 @@
   --ink-soft: #1f2d27;
   --muted: #5d6b64;          /* readable secondary text on white */
   --line: #e2e8e4;           /* hairline borders */
-  --signal: #16a34a;         /* passing-check green — accessible on white */
-  --signal-deep: #0f7a37;    /* hover / darker green */
+  --signal: #16a34a;         /* decorative passing-check green (borders, fills, icons) */
+  --signal-deep: #0f7a37;    /* AA default for white-on-green CTAs (~5:1 on #fff) */
+  --signal-deeper: #0b5e2a;  /* CTA hover — darker still, keeps AA */
+  --signal-text: #0c6e31;    /* green TEXT on white/light — clears AA 4.5:1 (~5.2:1) */
   --signal-dim: #b7e0c4;     /* tints, soft borders */
   --signal-wash: #eaf7ee;    /* selected/feature backgrounds */
   --warn: #b7791f;           /* amber, legible on white */
@@ -63,27 +65,27 @@ input:focus-visible {
 .mark { font-family: var(--mono); letter-spacing: 0.04em; color: var(--ink); font-size: 15px; font-weight: 600; }
 .topbar-cta {
   font-family: var(--mono); font-size: 13px; color: #fff; font-weight: 600;
-  background: var(--signal); cursor: pointer;
-  border: 1px solid var(--signal); padding: 8px 14px; border-radius: 6px;
+  background: var(--signal-deep); cursor: pointer;
+  border: 1px solid var(--signal-deep); padding: 8px 14px; border-radius: 6px;
 }
-.topbar-cta:hover { background: var(--signal-deep); border-color: var(--signal-deep); }
+.topbar-cta:hover { background: var(--signal-deeper); border-color: var(--signal-deeper); }
 
 /* ── Shared buttons ─────────────────────────────────────────────────────── */
 .btn-primary {
-  display: inline-block; background: var(--signal); color: #fff;
+  display: inline-block; background: var(--signal-deep); color: #fff;
   border: 0; padding: 15px 24px; border-radius: 8px;
   font-weight: 650; font-size: 16px; cursor: pointer; text-decoration: none;
   box-shadow: var(--shadow-sm);
   transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
 }
-.btn-primary:hover { background: var(--signal-deep); box-shadow: var(--shadow-md); }
+.btn-primary:hover { background: var(--signal-deeper); box-shadow: var(--shadow-md); }
 .btn-primary:active { transform: translateY(1px); }
 .btn-ghost {
   display: inline-block; color: var(--ink); text-decoration: none;
   border: 1px solid var(--line); padding: 15px 22px; border-radius: 8px;
   font-size: 15px; background: var(--panel); font-weight: 500;
 }
-.btn-ghost:hover { border-color: var(--signal); color: var(--signal-deep); }
+.btn-ghost:hover { border-color: var(--signal); color: var(--signal-text); }
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 .hero { padding: 84px 0 56px; }
@@ -117,7 +119,7 @@ input:focus-visible {
 .founding { margin: 24px 0 4px; }
 .founding-tag {
   display: inline-block; font-family: var(--mono); font-size: 11px;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--signal);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--signal-text);
   border: 1px solid var(--signal-dim); border-radius: 999px;
   padding: 4px 12px; margin: 0 0 12px;
 }
@@ -165,13 +167,13 @@ input:focus-visible {
   border-radius: 10px; padding: 24px 24px 22px; box-shadow: var(--shadow-sm);
 }
 .step-n {
-  font-family: var(--mono); font-size: 13px; color: var(--signal);
+  font-family: var(--mono); font-size: 13px; color: var(--signal-text);
   display: block; margin-bottom: 8px; font-weight: 600;
 }
 .step h3 { margin: 0 0 8px; font-size: 19px; }
 .step p { margin: 0 0 14px; color: var(--muted); }
 .step-meta {
-  font-family: var(--mono); font-size: 13px; color: var(--signal);
+  font-family: var(--mono); font-size: 13px; color: var(--signal-text);
   border-top: 1px solid var(--line); padding-top: 12px; display: block;
 }
 
@@ -201,12 +203,12 @@ input:focus-visible {
 }
 .price-tag {
   position: absolute; top: -11px; left: 22px; font-family: var(--mono); font-size: 11px;
-  letter-spacing: 0.08em; text-transform: uppercase; background: var(--signal); color: #fff;
+  letter-spacing: 0.08em; text-transform: uppercase; background: var(--signal-deep); color: #fff;
   padding: 3px 10px; border-radius: 999px;
 }
 .price-card h3 { margin: 0 0 10px; font-size: 18px; }
 .price { font-family: var(--mono); font-size: 26px; color: var(--ink); margin: 0; }
-.price-term { font-family: var(--mono); font-size: 12px; color: var(--signal); margin: 4px 0 14px; }
+.price-term { font-family: var(--mono); font-size: 12px; color: var(--signal-text); margin: 4px 0 14px; }
 .price-desc { color: var(--muted); font-size: 14px; margin: 0; }
 .pricing-cta { margin-top: 28px; }
 
@@ -233,7 +235,7 @@ input:focus-visible {
   padding: 9px 16px; border-radius: 6px; cursor: pointer; font-family: var(--mono); font-size: 13px;
 }
 .sc-back:disabled { opacity: 0.4; cursor: default; }
-.sc-next { color: var(--signal); border-color: var(--signal-dim); }
+.sc-next { color: var(--signal-text); border-color: var(--signal-dim); }
 
 /* Email gate */
 .sc-gate-sub { color: var(--muted); font-size: 14px; margin: 0 0 18px; max-width: 60ch; }
@@ -245,7 +247,7 @@ input:focus-visible {
 .capture input:focus { outline: 2px solid var(--signal-dim); outline-offset: 1px; border-color: var(--signal-dim); }
 .sc-reveal { margin-top: 6px; }
 .form-msg { min-height: 20px; font-size: 14px; margin: 12px 0 0; font-family: var(--mono); }
-.form-msg.ok { color: var(--signal); }
+.form-msg.ok { color: var(--signal-text); }
 .form-msg.error { color: var(--err); }
 
 /* Results */
@@ -260,7 +262,7 @@ input:focus-visible {
 .tier-at-risk.sc-tier { border-color: var(--err); }
 .tier-fragile { color: var(--warn); }
 .tier-fragile.sc-tier { border-color: var(--warn); }
-.tier-solid { color: var(--signal); }
+.tier-solid { color: var(--signal-text); }
 .tier-solid.sc-tier { border-color: var(--signal-dim); }
 .sc-headline { font-size: 22px; margin: 12px 0 8px; }
 .sc-summary { color: var(--muted); margin: 0 0 22px; }
@@ -278,7 +280,7 @@ input:focus-visible {
 }
 .sc-focus strong { color: var(--ink); }
 .sc-booking { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 22px; }
-.sc-booking-h { margin: 0 0 6px; font-size: 18px; color: var(--signal); }
+.sc-booking-h { margin: 0 0 6px; font-size: 18px; color: var(--signal-text); }
 .sc-booking-sub { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
 .sc-nurture { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 22px; }
 .sc-nurture p { color: var(--muted); margin: 0 0 18px; }
@@ -292,7 +294,7 @@ input:focus-visible {
   padding: 18px 20px; font-size: 16px; cursor: pointer;
   display: flex; justify-content: space-between; align-items: center; gap: 16px;
 }
-.faq-icon { font-family: var(--mono); color: var(--signal); font-size: 20px; flex: none; }
+.faq-icon { font-family: var(--mono); color: var(--signal-text); font-size: 20px; flex: none; }
 .faq-a { margin: 0; padding: 0 20px 20px; color: var(--muted); font-size: 15px; max-width: 70ch; }
 
 /* ── Booking section ────────────────────────────────────────────────────── */

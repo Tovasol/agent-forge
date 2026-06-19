@@ -24,6 +24,7 @@
     { "id": "analytics", "title": "Cloudflare Web Analytics (env-gated beacon, no placeholder shipped) + first-party /api/event beacon on submit/booking conversion", "passes": true },
     { "id": "seo-meta", "title": "Real title, meta description, OG + Twitter tags, JSON-LD, real og.png asset; no placeholder comments visible to visitors", "passes": true },
     { "id": "responsive", "title": "Responsive down to mobile, keyboard-focusable (focus-visible rings, reduced-motion)", "passes": true },
+    { "id": "wcag-aa-contrast", "title": "WCAG 2.2 AA contrast: CTA fills use --signal-deep (#0f7a37, ~5:1 white-on-green) and small green text uses --signal-text (#0c6e31, ~5.2:1 on white); decorative-only green retained for borders/icons/large hero accent", "passes": true },
     { "id": "build-green", "title": "npm run build and typecheck pass clean", "passes": true }
   ]
 }
