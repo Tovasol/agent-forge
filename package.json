@@ -40,7 +40,10 @@
     "rollback": "npm run forge -- rollback",
     "doctor": "npm run forge -- doctor",
     "resume": "npm run forge -- resume",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "idea": "npm run forge -- idea",
+    "meta": "npm run forge -- meta",
+    "spec-doc": "npm run forge -- spec-doc"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",

@@ -23,6 +23,10 @@ import {
 import { PHASE_ORDER, type Phase } from "./lib/types.js";
 import { runOvernight } from "./harness/overnight.js";
 import { snapshot, listSnapshots, rollback, lastGood } from "./harness/snapshot.js";
+import { createIdea, listIdeas, loadIdea, loadIdeaSpec, getMetrics, updateMetrics, activeIdea } from "./harness/loop-memory.js";
+import { runIdeaLoop, pivotIdea, killIdea } from "./harness/loop-executor.js";
+import { runMetaCycle, revertSpec, specVersions } from "./harness/meta-loop.js";
+import { writeSpecDoc } from "./harness/spec-doc.js";
 import { runGrowthCycle, reportBacklog } from "./agents/grow.js";
 import { reviewApprovals } from "./agents/approvals.js";
 import { runAttribution } from "./agents/attribution.js";
@@ -66,6 +70,91 @@ async function main() {
 
   // `tell` is a lightweight, separate-process command (writes to the steering
   // inbox the running engine reads). No auth/config banner needed.
+  if (cmd === "spec-doc") {
+    const out = writeSpecDoc();
+    log.ok("spec-doc", `Wrote specification to ${out}`);
+    log.raw(`Open it to review the full codified framework (stages, gates, checklists, memory, meta-loop).`);
+    return;
+  }
+
+  // ── Codified idea-to-profitability loop ─────────────────────────────────────
+  if (cmd === "idea") {
+    const sub = process.argv[3];
+    const rest = process.argv.slice(4).filter((a) => !a.startsWith("--"));
+    if (sub === "new" || sub === "launch") {
+      const hint = rest.join(" ").trim();
+      if (!hint) { log.error("idea", 'Give an idea: npm run forge -- idea new "<your idea>"'); return; }
+      const rec = createIdea(hint);
+      log.ok("idea", `Created idea "${rec.id}". Run it with: npm run forge -- idea run ${rec.id}`);
+      log.raw(`  It will walk the codified loop (niche → offer → channels → build → marketing → WTP → iterate → profit → scale), stopping at honest gates.`);
+      return;
+    }
+    if (sub === "list") {
+      const ideas = listIdeas();
+      if (!ideas.length) { log.raw("No ideas yet. Create one: npm run forge -- idea new \"<idea>\""); return; }
+      for (const i of ideas) log.raw(`  ${i.id}  [${i.status}]  stage=${i.currentStage}  done=${i.completedStages.length}  — ${i.hint}`);
+      return;
+    }
+    const id = rest[0] || activeIdea()?.id;
+    if (!id) { log.error("idea", "No idea id given and no active idea found."); return; }
+    if (sub === "run") { await runIdeaLoop(cfg, id); return; }
+    if (sub === "step") { await runIdeaLoop(cfg, id, { singleStage: true }); return; }
+    if (sub === "status") {
+      const rec = loadIdea(id);
+      if (!rec) { log.error("idea", `No idea "${id}".`); return; }
+      const spec = loadIdeaSpec(id);
+      log.raw(`Idea ${rec.id} [${rec.status}] — ${rec.hint}`);
+      log.raw(`Spec v${spec.specVersion}. Current stage: ${rec.currentStage}`);
+      for (const s of [...spec.stages].sort((a,b)=>a.order-b.order)) {
+        const mark = rec.completedStages.includes(s.id) ? "✓" : (s.id===rec.currentStage ? "▶" : "·");
+        log.raw(`  ${mark} ${s.order}. ${s.title}`);
+      }
+      log.raw(`\nMetrics: ${JSON.stringify(getMetrics(id))}`);
+      return;
+    }
+    if (sub === "metric") {
+      // forge idea metric <id> key=value key2=value2
+      const kvs = rest.slice(1);
+      if (!kvs.length) { log.error("idea", 'Usage: idea metric <id> key=value (e.g. paying_clients=3 wtp_confirmed=true)'); return; }
+      const patch: Record<string, number|boolean> = {};
+      for (const kv of kvs) {
+        const [k, v] = kv.split("=");
+        if (!k || v === undefined) continue;
+        patch[k] = v === "true" ? true : v === "false" ? false : isNaN(Number(v)) ? (v as any) : Number(v);
+      }
+      updateMetrics(id, patch);
+      log.ok("idea", `Recorded: ${JSON.stringify(patch)}. Resume with: npm run forge -- idea run ${id}`);
+      return;
+    }
+    if (sub === "pivot") { pivotIdea(id, rest[1]); return; }
+    if (sub === "kill") { killIdea(id, rest.slice(1).join(" ") || "operator kill"); return; }
+    log.error("idea", "Subcommands: new|list|run|step|status|metric|pivot|kill");
+    return;
+  }
+
+  if (cmd === "meta") {
+    const sub = process.argv[3];
+    if (sub === "versions") { log.raw(`Spec versions (newest first): ${specVersions().join(", ")}`); return; }
+    if (sub === "revert") {
+      const v = parseInt(process.argv[4] ?? "", 10);
+      if (!v) { log.error("meta", "Usage: meta revert <version>"); return; }
+      const r = revertSpec(v);
+      log.ok("meta", r ? `Reverted to v${v} (now active).` : `Could not revert to v${v}.`);
+      return;
+    }
+    if (sub === "improve") {
+      const auto = process.argv.includes("--auto");
+      const res = await runMetaCycle(cfg, { autoApprove: auto });
+      if (!res.proposed) { log.raw("No improvement proposed (need more idea-runs to learn from)."); return; }
+      if (res.accepted) log.ok("meta", `Applied. Spec now v${res.newSpecVersion}. Re-run affected ideas.`);
+      else if (res.failures) log.warn("meta", `Rejected by regression gate:\n- ${res.failures.join("\n- ")}`);
+      else { log.raw("Change proposed and passed regression, but needs your approval. Re-run with --auto to apply, or review:"); log.raw(JSON.stringify(res.proposed, null, 2)); }
+      return;
+    }
+    log.error("meta", "Subcommands: improve [--auto]|versions|revert <v>");
+    return;
+  }
+
   if (cmd === "tell") {
     if (process.argv.includes("--clear")) {
       clearSticky();
@@ -307,7 +396,7 @@ async function main() {
 
   log.error("cli", `Unknown command "${cmd}".`);
   log.raw(
-    "Usage: forge <run|resume|iterate|overnight|decision|snapshots|rollback|status|doctor|init|grow|backlog|approvals|attribution|watch|tell|dash|venture> ...\n" +
+    "Usage: forge <run|resume|iterate|overnight|idea|meta|spec-doc|decision|snapshots|rollback|status|doctor|init|grow|backlog|approvals|attribution|watch|tell|dash|venture> ...\n" +
       '  venture launch "<hint>" | venture resume | venture gates | venture status'
   );
   process.exit(1);
