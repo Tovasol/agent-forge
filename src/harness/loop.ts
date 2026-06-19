@@ -42,11 +42,18 @@ export async function runLoop(cfg: ForgeConfig, target: Phase | "all", opts: { f
   const phases = phasesToRun(target, cfg.autonomy);
   log.info("loop", `Plan: ${phases.join(" → ")}  (autonomy: ${cfg.autonomy})`);
 
+  let ranAny = false;
   for (let i = 0; i < phases.length; i++) {
     const phase = phases[i];
 
-    // In phased mode, gate BEFORE each phase (except the very first).
-    if (cfg.autonomy === "phased" && i > 0) {
+    // Skip phases already completed (so `resume`/run --all continues, not redoes).
+    if (loadState().completedPhases.includes(phase)) {
+      log.info("loop", `✓ ${phase} already complete — skipping.`);
+      continue;
+    }
+
+    // In phased mode, gate BEFORE each phase except the first one we run now.
+    if (cfg.autonomy === "phased" && ranAny) {
       const ok = await requestGate(cfg.autonomy, {
         kind: "phase",
         phase,
@@ -65,6 +72,7 @@ export async function runLoop(cfg: ForgeConfig, target: Phase | "all", opts: { f
       if (phase === "research") await runResearchPhase(cfg, { fresh: opts.fresh });
       else await RUNNERS[phase](cfg);
       markPhaseComplete(loadState(), phase);
+      ranAny = true;
       status.note(`✓ ${phase} complete`);
       log.ok("loop", `✓ Phase complete: ${phase}`);
     } catch (err) {
@@ -87,7 +95,8 @@ export async function runLoop(cfg: ForgeConfig, target: Phase | "all", opts: { f
   log.ok("loop", "All requested phases finished. See memory/progress.md.");
 }
 
-// Resume: figure out the next incomplete phase and continue from there.
+// Resume: continue from the next incomplete phase THROUGH the rest of the
+// pipeline (stopping only at human gates), not one phase at a time.
 export async function resumeLoop(cfg: ForgeConfig) {
   const s = loadState();
   if (s.pendingGate) {
@@ -98,7 +107,7 @@ export async function resumeLoop(cfg: ForgeConfig) {
     log.ok("resume", "Nothing to resume — all phases complete.");
     return;
   }
-  const next = remaining[0];
-  log.info("resume", `Resuming at phase: ${next}`);
-  await runLoop(cfg, cfg.autonomy === "research-only" && (next === "build" || next === "deploy" || next === "optimize") ? "all" : next);
+  log.info("resume", `Resuming at "${remaining[0]}" and running through: ${remaining.join(" → ")}`);
+  // Run the whole remaining sequence in one go (gates still pause as needed).
+  await runLoop(cfg, "all");
 }

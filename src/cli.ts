@@ -34,6 +34,21 @@ async function main() {
   const cmd = process.argv[2] ?? "status";
   const cfg = loadConfig();
 
+  // Graceful Ctrl-C: tell the user how to resume instead of a bare ^C.
+  // Completed phases/facets are checkpointed, so resuming continues, not redoes.
+  let interrupting = false;
+  process.on("SIGINT", () => {
+    if (interrupting) process.exit(130); // second Ctrl-C forces immediate exit
+    interrupting = true;
+    log.warn(
+      "interrupt",
+      "Ctrl-C received. Finishing the current write and stopping. Completed work is saved — " +
+        "run `npm run resume` to continue from here. (Press Ctrl-C again to force-quit.)"
+    );
+    // Let in-flight synchronous state writes settle, then exit.
+    setTimeout(() => process.exit(130), 500);
+  });
+
   if (cmd === "doctor") return doctor(cfg);
   if (cmd === "status") return status();
   if (cmd === "init") return init();

@@ -74,6 +74,7 @@ export async function buildProfile(cfg: ForgeConfig, opts: { force?: boolean } =
       model: cfg.models.lead,
       systemPrompt: prompt("operator-profiler"),
       label: "profile",
+      intent: "reading your resume & assets → building your operator profile",
       permissionMode: "plan",
       allowedTools: [],
       prompt:

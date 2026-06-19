@@ -17,6 +17,12 @@ function num(name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
+function bool(name: string, fallback: boolean): boolean {
+  const v = env(name).trim().toLowerCase();
+  if (v === "") return fallback;
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
 function loadBrief(): Brief {
   const path = resolve(ROOT, "config/brief.json");
   let fileBrief: Partial<Brief> = {};
@@ -68,6 +74,10 @@ export function loadConfig(): ForgeConfig {
     // they should rarely decide the outcome. Raise them for very broad topics.
     maxResearchWorkers: num("FORGE_MAX_RESEARCH_WORKERS", 12),
     maxResearchRounds: num("FORGE_MAX_RESEARCH_ROUNDS", 4),
+    // Pause-and-resume on plan usage limits (default on) so long runs survive.
+    waitOnUsageLimit: bool("FORGE_WAIT_ON_USAGE_LIMIT", true),
+    usagePollMinutes: num("FORGE_USAGE_POLL_MINUTES", 20),
+    usageMaxWaitHours: num("FORGE_USAGE_MAX_WAIT_HOURS", 0),
     autonomy,
     brief: loadBrief(),
     research: {

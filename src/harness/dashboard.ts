@@ -70,7 +70,12 @@ function frame(s: EngineStatus, tick: number, cols: number, rows: number): strin
   const lines: string[] = [];
 
   lines.push(`${C.bold}${C.cyan}┌─ Agent Forge ${"─".repeat(Math.max(0, W - 14))}┐${C.reset}`);
-  const stale = Date.now() - new Date(s.updatedAt).getTime() > 90_000;
+  const paused = s.pausedUntil && new Date(s.pausedUntil).getTime() > Date.now();
+  const stale = !paused && Date.now() - new Date(s.updatedAt).getTime() > 90_000;
+  if (paused) {
+    const mins = Math.max(0, Math.ceil((new Date(s.pausedUntil!).getTime() - Date.now()) / 60000));
+    lines.push(`  ${C.yellow}${C.bold}⏸ PAUSED — plan usage limit${C.reset}  ${C.dim}resuming ~${new Date(s.pausedUntil!).toLocaleTimeString()} (~${mins} min)${C.reset}`);
+  }
   const headerLine = `phase: ${s.phase}   elapsed: ${fmtElapsed(s.startedAt)}   spend: ~$${s.spendUsd.toFixed(2)}`;
   for (const l of wrapPlain(headerLine, W - 2)) lines.push(`  ${l}`);
   if (s.note) for (const l of wrapPlain(s.note, W - 2)) lines.push(`  ${C.dim}${l}${C.reset}`);
@@ -96,6 +101,9 @@ function frame(s: EngineStatus, tick: number, cols: number, rows: number): strin
   } else {
     const spin = stale ? `${C.red}■${C.reset}` : `${C.yellow}${SPIN[tick % SPIN.length]}${C.reset}`;
     lines.push(`  ${C.bold}Working${C.reset}  ${spin}`);
+    // For tool-less reasoning phases the note (elapsed + last action) is the
+    // main progress signal — show it clearly here.
+    if (s.note) for (const l of wrapPlain(s.note, W - 6)) lines.push(`      ${C.dim}${l}${C.reset}`);
   }
   lines.push("");
 

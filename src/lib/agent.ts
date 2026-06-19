@@ -29,6 +29,9 @@ export interface RunOptions {
   /** Short label for this step (e.g. "decide", "build", "stage:beachhead") so
    *  universal log/status/heartbeat feedback can attribute activity to it. */
   label?: string;
+  /** One-line description of WHAT this step is doing, shown immediately so a
+   *  tool-less reasoning phase isn't a blank spinner. */
+  intent?: string;
 }
 
 export interface RunResult {
@@ -106,24 +109,183 @@ async function loadSdk(): Promise<any> {
 
 /** Is this the SDK's transient subprocess-transport crash (exit code 1)? */
 function isTransientTransportError(e: unknown): boolean {
-  const msg = (e as Error)?.message ?? String(e);
+  const msg = errText(e);
   return (
     /process exited with code 1/i.test(msg) ||
     /Claude Code process exited/i.test(msg) ||
-    /ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|429|rate.?limit|overloaded/i.test(msg)
+    /ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|overloaded|429|rate.?limit/i.test(msg)
   );
+}
+
+/** Full error text including any nested cause/stderr, for pattern matching. */
+function errText(e: unknown): string {
+  const err = e as any;
+  return [err?.message, err?.stderr, err?.cause?.message, String(e)].filter(Boolean).join(" ");
+}
+
+/** Did we hit the subscription/plan USAGE limit (vs. a quick transient)? */
+function isUsageLimitError(e: unknown): boolean {
+  const msg = errText(e);
+  return (
+    /usage limit/i.test(msg) ||
+    /usage cap/i.test(msg) ||
+    /limit (?:will )?reset/i.test(msg) ||
+    /reached your .*limit/i.test(msg) ||
+    /quota (?:exceeded|reached)/i.test(msg) ||
+    /plan limit/i.test(msg)
+  );
+}
+
+/** Try to extract a reset time from a usage-limit message. Returns a future Date or null. */
+function parseResetTime(e: unknown): Date | null {
+  const msg = errText(e);
+  // 1) explicit unix epoch seconds (10 digits) or ms (13)
+  const epoch = msg.match(/\b(1[0-9]{9})(\d{3})?\b/);
+  if (epoch) {
+    const ms = epoch[2] ? Number(epoch[1] + epoch[2]) : Number(epoch[1]) * 1000;
+    const d = new Date(ms);
+    if (d.getTime() > Date.now()) return d;
+  }
+  // 2) ISO timestamp
+  const iso = msg.match(/\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?/);
+  if (iso) {
+    const d = new Date(iso[0]);
+    if (!isNaN(d.getTime()) && d.getTime() > Date.now()) return d;
+  }
+  // 3) "in 2 hours" / "in 45 minutes"
+  const rel = msg.match(/in\s+(\d+)\s*(hour|hr|minute|min)/i);
+  if (rel) {
+    const n = Number(rel[1]);
+    const unit = rel[2].toLowerCase();
+    const ms = /h/.test(unit) ? n * 3600_000 : n * 60_000;
+    return new Date(Date.now() + ms);
+  }
+  // 4) clock time "reset at 3:00 PM" / "resets at 15:00" -> next occurrence (local)
+  const clock = msg.match(/reset[s]?\s+(?:at\s+)?(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+  if (clock) {
+    const now = new Date();
+    let h = Number(clock[1]);
+    const m = Number(clock[2]);
+    const ap = clock[3]?.toLowerCase();
+    if (ap === "pm" && h < 12) h += 12;
+    if (ap === "am" && h === 12) h = 0;
+    const d = new Date(now);
+    d.setHours(h, m, 0, 0);
+    if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1); // next occurrence
+    return d;
+  }
+  return null;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** A tiny request to check whether the usage limit has cleared. */
+async function probeUsageCleared(opts: RunOptions): Promise<boolean> {
+  const restore = applyAuth(opts.cfg);
+  try {
+    const sdk = await loadSdk();
+    const query = sdk.query as (args: any) => AsyncGenerator<any>;
+    const stream = query({ prompt: "ok", options: { model: opts.cfg.models.worker, maxTurns: 1, allowedTools: [] } });
+    for await (const _ of stream) {
+      /* if it streams at all, we're not limited */
+    }
+    return true;
+  } catch (e) {
+    if (isUsageLimitError(e)) return false; // still limited
+    return true; // some other error — let the real call surface it
+  } finally {
+    restore();
+  }
+}
+
+/** Sleep for ms, updating the status countdown so the dashboard shows it's paused, not hung. */
+async function sleepWithCountdown(ms: number, resumeAt: Date, reason: string) {
+  const CHUNK = 30_000;
+  let remaining = ms;
+  while (remaining > 0) {
+    const mins = Math.ceil((resumeAt.getTime() - Date.now()) / 60000);
+    status.pause(resumeAt.toISOString(), `${reason} — resuming in ~${Math.max(0, mins)} min`);
+    log.activity("usage", `⏸ paused: ${reason}; resuming ~${resumeAt.toLocaleTimeString()} (~${Math.max(0, mins)} min)`);
+    await sleep(Math.min(CHUNK, remaining));
+    remaining -= CHUNK;
+  }
+}
+
 /**
- * Run a single agent task to completion and return the final text.
- *
- * Wraps the core call in retry-with-backoff so a transient subprocess crash or
- * rate trip doesn't fail the task (and, via Promise.all upstream, the whole
- * run). Retries up to 3 times with increasing, jittered delay.
+ * Wait out a usage-limit window, then return so the caller can retry. Loops:
+ * sleep until the parsed reset (or a poll interval), probe, and either resume
+ * or keep waiting. Bounded by FORGE_USAGE_MAX_WAIT_HOURS (0 = unlimited).
+ */
+async function waitForUsageReset(opts: RunOptions, hint: unknown): Promise<void> {
+  const cfg = opts.cfg;
+  const startedWait = Date.now();
+  const maxMs = cfg.usageMaxWaitHours > 0 ? cfg.usageMaxWaitHours * 3600_000 : Infinity;
+  let hintForParse: unknown = hint;
+
+  log.warn("usage", "Plan usage limit reached. Pausing — the engine will wait and resume automatically (work already done is checkpointed).");
+
+  for (;;) {
+    const reset = parseResetTime(hintForParse);
+    const pollMs = cfg.usagePollMinutes * 60_000;
+    const resumeAt = reset ?? new Date(Date.now() + pollMs);
+    const waitMs = Math.max(60_000, resumeAt.getTime() - Date.now()); // at least 1 min
+    log.warn(
+      "usage",
+      reset
+        ? `Limit resets ~${resumeAt.toLocaleString()}. Sleeping until then, then resuming.`
+        : `No reset time given. Checking again every ${cfg.usagePollMinutes} min until it clears.`
+    );
+    await sleepWithCountdown(waitMs + 5_000, resumeAt, "Plan usage limit");
+
+    if (Date.now() - startedWait > maxMs) {
+      throw new Error(`Usage-limit wait exceeded FORGE_USAGE_MAX_WAIT_HOURS (${cfg.usageMaxWaitHours}h). Aborting.`);
+    }
+
+    log.info("usage", "Checking whether the usage limit has reset…");
+    if (await probeUsageCleared(opts)) {
+      status.resume();
+      log.ok("usage", "Usage limit has reset. Resuming work.");
+      return;
+    }
+    hintForParse = null; // after the first window, just poll
+  }
+}
+
+/**
+ * Run a single agent task to completion. Two layers of resilience:
+ *  1. Transient transport crashes / rate trips: retry 3× with backoff.
+ *  2. Plan USAGE-LIMIT exhaustion: pause and wait for reset, then resume —
+ *     so a long run rides out usage windows instead of failing. Unbounded by
+ *     default (FORGE_USAGE_MAX_WAIT_HOURS=0) so it can run for days/weeks.
  */
 export async function runAgent(opts: RunOptions): Promise<RunResult> {
+  for (;;) {
+    try {
+      return await runAgentTransient(opts);
+    } catch (e) {
+      if (cfgWaitsOnUsage(opts.cfg) && isUsageLimitError(e)) {
+        await waitForUsageReset(opts, e);
+        continue; // limit cleared — retry the whole task (checkpointed work is skipped)
+      }
+      // A generic repeated crash MIGHT be a usage limit hiding behind exit-1.
+      if (cfgWaitsOnUsage(opts.cfg) && isTransientTransportError(e)) {
+        const cleared = await probeUsageCleared(opts);
+        if (!cleared) {
+          await waitForUsageReset(opts, e);
+          continue;
+        }
+      }
+      throw e;
+    }
+  }
+}
+
+function cfgWaitsOnUsage(cfg: ForgeConfig): boolean {
+  return cfg.waitOnUsageLimit !== false;
+}
+
+/** Transient-retry layer (subprocess crashes / brief rate trips). */
+async function runAgentTransient(opts: RunOptions): Promise<RunResult> {
   const maxAttempts = 3;
   let lastErr: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -131,6 +293,8 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       return await runAgentOnce(opts);
     } catch (e) {
       lastErr = e;
+      // Don't burn transient retries on a usage limit — let runAgent handle it.
+      if (isUsageLimitError(e)) throw e;
       if (attempt < maxAttempts && isTransientTransportError(e)) {
         const backoff = 1500 * 2 ** (attempt - 1) + Math.floor(Math.random() * 750);
         log.warn(
@@ -167,22 +331,27 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
     // Universal feedback: every agent call (not just research) reports activity.
     const label = opts.label ?? "agent";
     const startedAt = Date.now();
-    let lastBeatMsg = "";
-    // Heartbeat so even a silent "thinking" phase shows it's alive on the
-    // dashboard and in the log, with elapsed seconds.
-    const beat = setInterval(() => {
-      const secs = Math.round((Date.now() - startedAt) / 1000);
-      const msg = lastBeatMsg || "working…";
-      status.note(`${label}: ${msg} (${secs}s)`);
-    }, 5000);
+    let lastBeatMsg = opts.intent ? opts.intent : "starting…";
 
     const emitActivity = (a: { kind: string; detail: string }) => {
-      const icon = a.kind === "search" ? "🔍" : a.kind === "fetch" ? "🌐" : a.kind === "thinking" ? "💭" : "⚙";
+      const icon =
+        a.kind === "search" ? "🔍" : a.kind === "fetch" ? "🌐" : a.kind === "thinking" ? "💭" : a.kind === "writing" ? "✍" : "⚙";
       lastBeatMsg = `${a.kind}${a.detail ? ": " + a.detail : ""}`;
       log.activity(label, `${icon} ${a.kind}${a.detail ? ": " + a.detail : ""}`);
       status.activity(`[${label}] ${icon} ${a.kind}${a.detail ? ": " + a.detail : ""}`);
       if (opts.onActivity) opts.onActivity(a);
     };
+
+    // Announce intent up front so even a tool-less reasoning phase (decide,
+    // synthesize, profile) says WHAT it's doing instead of just spinning.
+    if (opts.intent) emitActivity({ kind: "start", detail: opts.intent });
+
+    // Heartbeat: shows it's alive with elapsed seconds, turn count, and the last
+    // thing it did — so a silent thinking phase still reports progress.
+    const beat = setInterval(() => {
+      const secs = Math.round((Date.now() - startedAt) / 1000);
+      status.note(`${label}: ${lastBeatMsg} · ${turns} turn(s) · ${secs}s`);
+    }, 4000);
 
     const stream = query({
       prompt: opts.prompt,
@@ -205,18 +374,20 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
         if (message.type === "assistant") {
           turns++;
           const content = message.message?.content ?? [];
-          let sawText = false;
           for (const block of content) {
             if (block.type === "text") {
               text += block.text;
-              sawText = true;
+              // Surface a short snippet of streamed reasoning so non-tool phases
+              // show real progress, not just "thinking".
+              const snip = String(block.text).replace(/\s+/g, " ").trim().slice(0, 90);
+              if (snip) emitActivity({ kind: "thinking", detail: `${snip}…` });
+            } else if (block.type === "thinking" || block.type === "redacted_thinking") {
+              const t = String(block.thinking ?? "").replace(/\s+/g, " ").trim().slice(0, 90);
+              if (t) emitActivity({ kind: "thinking", detail: `${t}…` });
             } else if (block.type === "tool_use") {
               emitActivity(describeToolUse(block));
             }
           }
-          // A turn with reasoning/text but no tool call: pulse so long non-tool
-          // phases (decide, synthesize, profile) aren't silent.
-          if (sawText) emitActivity({ kind: "thinking", detail: `turn ${turns}` });
         } else if (message.type === "result") {
           raw = message;
           costUsd = message.total_cost_usd ?? message.cost_usd;

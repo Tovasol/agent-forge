@@ -88,6 +88,7 @@ export async function runStage(
       model: cfg.models.lead,
       systemPrompt: prompt("stage-runner"),
       label: "stage:run",
+      intent: "running this venture stage → producing its artifacts",
       permissionMode: "plan",
       allowedTools: ["WebSearch", "WebFetch", "Read", "Glob", "Grep"],
       prompt: ask,
@@ -140,6 +141,7 @@ async function produceBrief(cfg: ForgeConfig, v: VentureState, def: StageDef) {
       model: cfg.models.lead,
       systemPrompt: prompt("decision-brief"),
       label: "stage:decision-brief",
+      intent: "researching the options → building the decision brief",
       permissionMode: "plan",
       allowedTools: ["WebSearch", "WebFetch"],
       prompt:

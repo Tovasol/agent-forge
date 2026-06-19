@@ -45,6 +45,11 @@ export interface ForgeConfig {
   maxResearchWorkers: number;
   // How many gap-closing rounds the research phase may run (spawn-new / sharpen).
   maxResearchRounds: number;
+  // Usage-limit handling: pause and wait for the plan's limit to reset rather
+  // than failing, so long runs survive usage windows.
+  waitOnUsageLimit: boolean;
+  usagePollMinutes: number; // re-check interval when no reset time is given
+  usageMaxWaitHours: number; // 0 = unlimited (run for days/weeks)
   autonomy: Autonomy;
   brief: Brief;
   research: {

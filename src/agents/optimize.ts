@@ -43,6 +43,7 @@ export async function runOptimizePhase(cfg: ForgeConfig): Promise<void> {
     model: cfg.models.lead,
     systemPrompt: prompt("optimizer"),
     label: "optimize",
+    intent: "analyzing metrics → proposing the next improvement",
     permissionMode: "plan",
     allowedTools: ["Read", "Glob", "Grep", "WebSearch"],
     prompt:

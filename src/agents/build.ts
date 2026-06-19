@@ -25,19 +25,26 @@ export async function runBuildPhase(cfg: ForgeConfig): Promise<void> {
     .map((d) => `- ${d.id}: ${d.recommendation} ($${d.options.find((o) => o.name === d.recommendation)?.monthlyCostUsd ?? 0}/mo) — ${d.rationale}`)
     .join("\n");
 
-  log.step("build", "Builder agent implementing the site (feature-by-feature)…");
+  log.step("build", "Builder agent implementing the site (resumes from existing work)…");
   const result = await runAgent({
     cfg,
     model: cfg.models.lead,
     systemPrompt: prompt("builder"),
     label: "build",
+    intent: "inspecting site/scaffold → continuing the build from where it left off",
     permissionMode: "acceptEdits",
     cwd: siteDir,
     allowedTools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
     prompt:
       "Implement the lead-magnet site in this directory based on these approved decisions:\n\n" +
       decisionsSummary +
-      "\n\nThe stack to use is React + Cloudflare + Google Workspace (Sheets CRM to start). " +
+      "\n\nRESUME-SAFE — this build may have been interrupted before. FIRST, inspect the current directory " +
+      "and read forge-features.json (the checklist) if it exists. Do NOT start over. For each feature already " +
+      "present, VERIFY it is actually complete and valid (open the file; a feature interrupted mid-write may " +
+      "exist but be truncated or not typecheck) — only mark passes:true after it builds/typechecks. Then " +
+      "continue building the remaining or incomplete features. Re-doing already-complete, verified work is wasteful; " +
+      "leaving a half-written file broken is worse — so verify, don't assume.\n\n" +
+      "The stack to use is React + Cloudflare + Google Workspace (Sheets CRM to start). " +
       "Maintain forge-features.json as your checklist. Build the hero, the lead-magnet offer, the capture form, " +
       "the funnel (capture -> email confirmation -> CRM row), and a thank-you/next-step page. " +
       "Verify each feature (npm run build / typecheck) before marking it passes:true. " +

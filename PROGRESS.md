@@ -71,6 +71,7 @@ This file tracks what's been built into Agent Forge across sessions, so any futu
 - Live dashboard: `npm run dash` renders the fan-out tree (research) or a Working spinner + heartbeat (other phases), with streaming activity, redrawing each second. Decoupled from the engine — run in a second terminal, attach/detach anytime; flags "no update >90s".
 - Verified: status round-trips; dashboard renders for research AND non-research phases; phase transitions clear stale facets; logs persist.
 - Log fidelity: tool-use detail (search queries, fetch URLs) is captured FULL in the log/terminal (was truncated to 80 chars). Dashboard is width/height-aware — uses the real terminal size, redraws on resize, and WORD-WRAPS long lines (URLs hard-split) instead of truncating. Fits exactly at ≥48 cols.
+- Reasoning-phase feedback: tool-less phases (decide, optimize, synthesize, profile, requirements, venture stages) now announce an INTENT line up front, surface streamed reasoning snippets (and thinking blocks if present), and show a heartbeat with elapsed + turn count — so they're no longer a blank spinner. Dashboard's Working box shows the heartbeat note prominently.
 
 ### Idempotent, resumable, gap-filling research (across runs)
 - The plan now PERSISTS (`memory/research/plan.json`). Re-runs reuse it, so facet ids stay stable and the checkpoint-skip matches — without this, re-planning would change ids and redo everything.
@@ -78,6 +79,18 @@ This file tracks what's been built into Agent Forge across sessions, so any futu
 - Workers consult a compact "ALREADY ESTABLISHED" coverage digest (prior claims + source dates) and are told to fill gaps / refresh stale items rather than re-derive known facts.
 - `npm run forge -- run --phase research --fresh` wipes prior plan/findings/sources for a clean restart. Normal runs always resume.
 - Verified: plan persists with stable ids; interrupted re-run skips finished facet and runs only the rest; digest reflects prior findings; --fresh clears everything.
+
+### Surviving plan usage limits (multi-day/week runs)
+- When the plan usage limit is hit, the engine PAUSES instead of failing: detects the usage-limit error, parses the reset time when present (clock time / "in N hours" / ISO / epoch) or polls every FORGE_USAGE_POLL_MINUTES otherwise, sleeps with a live countdown, probes whether it's cleared, then RESUMES automatically. Checkpointed work isn't lost.
+- Distinguishes usage-limit (wait) from auth/login errors (fail fast) and from transient crashes (3× retry). A generic repeated crash is probed in case a usage limit is hiding behind exit-1.
+- Unbounded by default (FORGE_USAGE_MAX_WAIT_HOURS=0) so it can run for days/weeks; dashboard shows a ⏸ PAUSED banner with resume countdown.
+- Verified: detection matches usage messages but not auth errors; reset parser handles clock/relative/ISO/epoch; pause banner + countdown render and clear on resume.
+
+### Resume runs through to the end + interrupt-safe build
+- `npm run resume` now continues from the first incomplete phase THROUGH all remaining phases in one invocation (was a bug: it ran only the next single phase and stopped). Completed phases are skipped, not redone. It still pauses at genuine human gates.
+- Build is now resume-safe by INSPECTION (no manifest needed): on a re-run the builder reads the existing directory + forge-features.json, VERIFIES existing files are complete/valid (a file interrupted mid-write may exist but be truncated), and continues rather than restarting.
+- Graceful Ctrl-C: the run catches SIGINT, prints a "run `npm run resume` to continue" hint, lets in-flight writes settle, and exits; a second Ctrl-C force-quits. Completed work is always checkpointed.
+- Verified: resume-all runs the full remaining sequence and skips completed phases.
 
 ### Known follow-ups (not yet built)
 - Cloudflare Cron Trigger Worker to run `grow` on a schedule in your own infra

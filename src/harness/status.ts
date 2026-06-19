@@ -27,6 +27,7 @@ export interface EngineStatus {
   activity: string[]; // ring buffer of recent activity lines
   spendUsd: number;
   note: string;
+  pausedUntil?: string | null; // ISO time the engine will resume after a usage-limit pause
 }
 
 const PATH = resolve(process.cwd(), "memory/status.json");
@@ -114,6 +115,17 @@ export const status = {
   note(n: string) {
     const s = read();
     s.note = n;
+    write(s);
+  },
+  pause(untilIso: string, reason: string) {
+    const s = read();
+    s.pausedUntil = untilIso;
+    s.note = reason;
+    write(s);
+  },
+  resume() {
+    const s = read();
+    s.pausedUntil = null;
     write(s);
   },
   snapshot(): EngineStatus {
