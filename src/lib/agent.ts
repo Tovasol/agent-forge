@@ -239,9 +239,13 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
 function describeToolUse(block: any): { kind: string; detail: string } {
   const name: string = block.name ?? "tool";
   const input = block.input ?? {};
-  if (/search/i.test(name)) return { kind: "search", detail: String(input.query ?? "").slice(0, 80) };
-  if (/fetch/i.test(name)) return { kind: "fetch", detail: String(input.url ?? "").slice(0, 80) };
-  return { kind: name, detail: JSON.stringify(input).slice(0, 60) };
+  // Capture the FULL query/URL for the persistent log and scrolling terminal
+  // (which wrap naturally). The dashboard shortens for its fixed width itself.
+  // The cap here only guards against a pathological multi-KB tool input.
+  const CAP = 1000;
+  if (/search/i.test(name)) return { kind: "search", detail: String(input.query ?? "").slice(0, CAP) };
+  if (/fetch/i.test(name)) return { kind: "fetch", detail: String(input.url ?? "").slice(0, CAP) };
+  return { kind: name, detail: JSON.stringify(input).slice(0, CAP) };
 }
 
 /**

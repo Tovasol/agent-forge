@@ -30,7 +30,7 @@ export interface EngineStatus {
 }
 
 const PATH = resolve(process.cwd(), "memory/status.json");
-const MAX_ACTIVITY = 14;
+const MAX_ACTIVITY = 60;
 
 function read(): EngineStatus {
   if (existsSync(PATH)) {

@@ -70,6 +70,7 @@ This file tracks what's been built into Agent Forge across sessions, so any futu
 - Status snapshot: `memory/status.json` tracks current phase, the research fan-out tree (facet state/searches/claims), spend, and recent activity. Facets clear on phase change.
 - Live dashboard: `npm run dash` renders the fan-out tree (research) or a Working spinner + heartbeat (other phases), with streaming activity, redrawing each second. Decoupled from the engine — run in a second terminal, attach/detach anytime; flags "no update >90s".
 - Verified: status round-trips; dashboard renders for research AND non-research phases; phase transitions clear stale facets; logs persist.
+- Log fidelity: tool-use detail (search queries, fetch URLs) is captured FULL in the log/terminal (was truncated to 80 chars). Dashboard is width/height-aware — uses the real terminal size, redraws on resize, and WORD-WRAPS long lines (URLs hard-split) instead of truncating. Fits exactly at ≥48 cols.
 
 ### Known follow-ups (not yet built)
 - Cloudflare Cron Trigger Worker to run `grow` on a schedule in your own infra
