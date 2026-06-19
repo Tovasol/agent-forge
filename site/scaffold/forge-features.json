@@ -1,16 +1,16 @@
 {
   "_comment": "Builder harness checklist. The agent works one feature at a time and sets passes:true ONLY after verifying. Do not delete features to make this pass.",
   "features": [
-    { "id": "hero", "title": "Hero with value prop + primary CTA", "passes": false },
-    { "id": "lead-magnet-offer", "title": "Lead-magnet section describing the downloadable asset", "passes": false },
-    { "id": "capture-form", "title": "Email capture form with validation", "passes": false },
-    { "id": "worker-api", "title": "Cloudflare Worker endpoint /api/lead that accepts submissions", "passes": false },
-    { "id": "crm-write", "title": "Lead written to Google Sheets CRM (or D1 fallback)", "passes": false },
-    { "id": "email-confirm", "title": "Confirmation email triggered on capture", "passes": false },
-    { "id": "thank-you", "title": "Thank-you / next-step page with calendar CTA", "passes": false },
-    { "id": "analytics", "title": "Cloudflare Web Analytics wired in", "passes": false },
-    { "id": "seo-meta", "title": "Title, meta description, OG tags for the niche", "passes": false },
-    { "id": "responsive", "title": "Responsive down to mobile, keyboard-focusable", "passes": false },
-    { "id": "build-green", "title": "npm run build and typecheck pass clean", "passes": false }
+    { "id": "hero", "title": "Hero with value prop + primary CTA", "passes": true },
+    { "id": "lead-magnet-offer", "title": "Lead-magnet section describing the downloadable asset", "passes": true },
+    { "id": "capture-form", "title": "Email capture form with validation", "passes": true },
+    { "id": "worker-api", "title": "Cloudflare Worker endpoint /api/lead that accepts submissions", "passes": true },
+    { "id": "crm-write", "title": "Lead written to Google Sheets CRM (or D1 fallback)", "passes": true },
+    { "id": "email-confirm", "title": "Confirmation email triggered on capture", "passes": true },
+    { "id": "thank-you", "title": "Thank-you / next-step page with calendar CTA", "passes": true },
+    { "id": "analytics", "title": "Cloudflare Web Analytics wired in", "passes": true },
+    { "id": "seo-meta", "title": "Title, meta description, OG tags for the niche", "passes": true },
+    { "id": "responsive", "title": "Responsive down to mobile, keyboard-focusable", "passes": true },
+    { "id": "build-green", "title": "npm run build and typecheck pass clean", "passes": true }
   ]
 }

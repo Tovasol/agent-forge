@@ -12,9 +12,14 @@ binding = "ASSETS"
 # ── CRM via Google Sheets (set as secrets, not here) ──
 # wrangler secret put GOOGLE_SA_EMAIL
 # wrangler secret put GOOGLE_SA_KEY
-# Put the non-secret sheet id in vars:
+#
+# ── Confirmation email via Resend (set as a secret) ──
+# wrangler secret put RESEND_API_KEY
+#
+# Put non-secret config in vars:
 [vars]
 # CRM_SHEET_ID = "your-sheet-id"
+# RESEND_FROM = "PipelineForge <hello@yourdomain.com>"
 
 # ── Optional D1 fallback store ──
 # [[d1_databases]]
