@@ -176,7 +176,7 @@ function buildEmail(
     ``,
     `What this means and where to focus first is on your results page.`,
     lead.tier === "at-risk"
-      ? `Your score puts you in the danger zone. If you'd like a focused 30-minute reliability call, just reply to this email.`
+      ? `Your score puts you in the danger zone. If you'd like a focused 20-minute reliability call, just reply to this email.`
       : `Reply any time if you'd like to talk through your report.`,
     ``,
     `— PipelineForge`,
@@ -196,7 +196,7 @@ function buildEmail(
     }</p>
     <p style="color:#555">${
       lead.tier === "at-risk"
-        ? "If you'd like a focused 30-minute reliability call, just reply to this email."
+        ? "If you'd like a focused 20-minute reliability call, just reply to this email."
         : "Reply any time if you'd like to talk through your report."
     }</p>
     <hr style="border:0;border-top:1px solid #eee;margin:24px 0" />
