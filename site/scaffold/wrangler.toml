@@ -1,31 +1,16 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "pipelineforge-site"
-main = "worker/index.ts"
+pages_build_output_dir = "dist"
 compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Static assets (the Vite build output).
-[assets]
-directory = "dist"
-binding = "ASSETS"
-
-# ── CRM via Google Sheets (set as secrets, not here) ──
-# wrangler secret put GOOGLE_SA_EMAIL
-# wrangler secret put GOOGLE_SA_KEY
-#
-# ── Confirmation email via Resend (set as a secret) ──
-# wrangler secret put RESEND_API_KEY
-#
-# Put non-secret config in vars:
+# ── Non-secret environment variables ──────────────────────────────────────────
+# Uncomment and fill in after creating the Google Sheet / Resend sender:
 [vars]
-# CRM_SHEET_ID = "your-sheet-id"
-# RESEND_FROM = "PipelineForge <hello@yourdomain.com>"
+# CRM_SHEET_ID = "your-google-sheet-id"
+# RESEND_FROM  = "PipelineForge <hello@pipelineforge.dev>"
 
-# ── Optional D1 fallback store ──
-# [[d1_databases]]
-# binding = "LEADS"
-# database_name = "leads"
-# database_id = "xxxxxxxx"
-
-# After `wrangler d1 create leads`, run the schema in worker/schema.sql:
-#   wrangler d1 execute leads --file=worker/schema.sql
+# ── Secrets (set via dashboard or CLI) ────────────────────────────────────────
+# wrangler pages secret put GOOGLE_SA_EMAIL  --project-name pipelineforge-site
+# wrangler pages secret put GOOGLE_SA_KEY    --project-name pipelineforge-site
+# wrangler pages secret put RESEND_API_KEY   --project-name pipelineforge-site
