@@ -72,6 +72,13 @@ This file tracks what's been built into Agent Forge across sessions, so any futu
 - Verified: status round-trips; dashboard renders for research AND non-research phases; phase transitions clear stale facets; logs persist.
 - Log fidelity: tool-use detail (search queries, fetch URLs) is captured FULL in the log/terminal (was truncated to 80 chars). Dashboard is width/height-aware — uses the real terminal size, redraws on resize, and WORD-WRAPS long lines (URLs hard-split) instead of truncating. Fits exactly at ≥48 cols.
 
+### Idempotent, resumable, gap-filling research (across runs)
+- The plan now PERSISTS (`memory/research/plan.json`). Re-runs reuse it, so facet ids stay stable and the checkpoint-skip matches — without this, re-planning would change ids and redo everything.
+- Re-running research is idempotent: finished facets are skipped, only missing/interrupted ones run, then the critic fans out for any new gaps. Run it 2–3× to progressively fill gaps or recover from an interrupted run.
+- Workers consult a compact "ALREADY ESTABLISHED" coverage digest (prior claims + source dates) and are told to fill gaps / refresh stale items rather than re-derive known facts.
+- `npm run forge -- run --phase research --fresh` wipes prior plan/findings/sources for a clean restart. Normal runs always resume.
+- Verified: plan persists with stable ids; interrupted re-run skips finished facet and runs only the rest; digest reflects prior findings; --fresh clears everything.
+
 ### Known follow-ups (not yet built)
 - Cloudflare Cron Trigger Worker to run `grow` on a schedule in your own infra
 - An n8n funnel-plumbing handoff (optional, if you adopt n8n for integrations)

@@ -38,7 +38,7 @@ function phasesToRun(target: Phase | "all", autonomy: string): Phase[] {
   return [target];
 }
 
-export async function runLoop(cfg: ForgeConfig, target: Phase | "all") {
+export async function runLoop(cfg: ForgeConfig, target: Phase | "all", opts: { fresh?: boolean } = {}) {
   const phases = phasesToRun(target, cfg.autonomy);
   log.info("loop", `Plan: ${phases.join(" → ")}  (autonomy: ${cfg.autonomy})`);
 
@@ -62,7 +62,8 @@ export async function runLoop(cfg: ForgeConfig, target: Phase | "all") {
     log.info("loop", `▶ Phase: ${phase}`);
     status.start(phase, `Running ${phase}…`);
     try {
-      await RUNNERS[phase](cfg);
+      if (phase === "research") await runResearchPhase(cfg, { fresh: opts.fresh });
+      else await RUNNERS[phase](cfg);
       markPhaseComplete(loadState(), phase);
       status.note(`✓ ${phase} complete`);
       log.ok("loop", `✓ Phase complete: ${phase}`);

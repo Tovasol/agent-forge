@@ -56,7 +56,7 @@ async function main() {
       log.error("cli", `Unknown phase "${phase}". Use one of: ${valid.join(", ")}`);
       process.exit(1);
     }
-    await runLoop(cfg, phase);
+    await runLoop(cfg, phase, { fresh: process.argv.includes("--fresh") });
     return;
   }
 

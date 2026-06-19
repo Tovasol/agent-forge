@@ -15,6 +15,10 @@ import {
   appendSources,
   loadSourceUrls,
   saveSynthesis,
+  savePlan,
+  loadPlan,
+  clearResearch,
+  coverageDigest,
 } from "../harness/memory.js";
 import { recordSpend } from "../harness/budget.js";
 import { status } from "../harness/status.js";
@@ -37,6 +41,14 @@ function briefBlock(cfg: ForgeConfig): string {
 }
 
 async function plan(cfg: ForgeConfig): Promise<WorkerSpec[]> {
+  // Idempotency: reuse a persisted plan so re-runs keep the SAME facet ids and
+  // the checkpoint-skip matches. Only re-plan when none exists (or after --fresh).
+  const prior = loadPlan();
+  if (prior && prior.length) {
+    log.ok("research", `Resuming prior plan: ${prior.length} facet(s) [${prior.map((s) => s.id).join(", ")}]`);
+    status.setFacets(prior.map((s) => ({ id: s.id, title: s.title })));
+    return prior;
+  }
   log.step("research", "Scoping the venture, then deciding the research decomposition…");
   const { data, meta } = await runAgentJson<WorkerSpec[]>({
     cfg,
@@ -64,6 +76,7 @@ async function plan(cfg: ForgeConfig): Promise<WorkerSpec[]> {
   const specs = data
     .slice(0, cfg.maxResearchWorkers)
     .map((w) => ({ ...w, outputFile: `memory/findings/${w.id}.json` }));
+  savePlan(specs);
   log.ok("research", `Planned ${specs.length} facet(s) for this venture: ${specs.map((s) => s.id).join(", ")}`);
   status.setFacets(specs.map((s) => ({ id: s.id, title: s.title })));
   return specs;
@@ -72,10 +85,12 @@ async function plan(cfg: ForgeConfig): Promise<WorkerSpec[]> {
 async function runWorker(cfg: ForgeConfig, spec: WorkerSpec): Promise<Finding> {
   log.step("worker:" + spec.id, spec.title);
   status.facet(spec.id, { state: "researching", startedAt: new Date().toISOString() });
+  const coverage = coverageDigest();
   const ask =
     `WORKER ID: ${spec.id}\nOBJECTIVE: ${spec.objective}\n` +
     `QUESTIONS:\n` +
     spec.questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n") +
+    (coverage ? `\n\n${coverage}\n` : "") +
     `\n\nContext:\n${briefBlock(cfg)}\n\nReturn ONLY the findings JSON.`;
   const { data, meta } = await runAgentJson<Finding>({
     cfg,
@@ -186,10 +201,14 @@ async function synthesize(cfg: ForgeConfig, findings: Finding[], saturationNote:
   }
 }
 
-export async function runResearchPhase(cfg: ForgeConfig): Promise<Finding[]> {
+export async function runResearchPhase(cfg: ForgeConfig, opts: { fresh?: boolean } = {}): Promise<Finding[]> {
   const state = loadState();
   state.currentPhase = "research";
-  recordNote(state, "research", "Research phase started.");
+  if (opts.fresh) {
+    clearResearch();
+    log.warn("research", "--fresh: cleared prior plan, findings, and sources. Starting over.");
+  }
+  recordNote(state, "research", opts.fresh ? "Research restarted fresh." : "Research phase started (resumes prior progress if any).");
   status.start("research", "Scoping the venture and decomposing research…");
 
   const limit = pLimitless(cfg.maxParallelWorkers);
@@ -279,6 +298,7 @@ export async function runResearchPhase(cfg: ForgeConfig): Promise<Finding[]> {
         outputFile: `memory/findings/${m.id}.json`,
       }));
       specs = specs.concat(toAdd);
+      savePlan(specs); // persist so a future re-run knows about the fanned-out facets
       for (const t of toAdd) status.addFacet({ id: t.id, title: t.title });
       log.warn("research", `Not saturated — fanning out further: +${toAdd.length} new facet(s) the critic found missing.`);
     } else if (verdict.verdict === "revise") {

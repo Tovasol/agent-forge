@@ -169,6 +169,63 @@ export function loadSynthesis(): import("../lib/types.js").ResearchSynthesis | n
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+// ── Research plan persistence (for cross-run idempotency) ─────────────────────
+// The plan is an LLM output, so it must persist — otherwise a re-run re-plans
+// with different facet ids and the checkpoint-skip can't match, redoing work.
+const PLAN_PATH = () => resolve(MEM, "research", "plan.json");
+
+export function savePlan(specs: import("../lib/types.js").WorkerSpec[]): void {
+  const p = PLAN_PATH();
+  ensureDir(p);
+  writeFileSync(p, JSON.stringify(specs, null, 2));
+}
+
+export function loadPlan(): import("../lib/types.js").WorkerSpec[] | null {
+  const p = PLAN_PATH();
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/** Wipe all research artifacts for a clean restart (`--fresh`). */
+export function clearResearch(): void {
+  const dir = resolve(MEM, "research");
+  const findingsDir = resolve(MEM, "findings");
+  for (const d of [dir]) if (existsSync(d)) rmSync(d, { recursive: true, force: true });
+  if (existsSync(findingsDir)) {
+    for (const f of readdirSync(findingsDir)) if (f.endsWith(".json")) rmSync(resolve(findingsDir, f));
+  }
+}
+
+/**
+ * A compact digest of what's already been researched — known claims (capped)
+ * and source URLs with dates — so a worker can SKIP covered ground and only
+ * fill gaps / refresh stale items. Bounded to keep the prompt small.
+ */
+export function coverageDigest(maxClaims = 40): string {
+  const findings = loadFindings();
+  if (!findings.length) return "";
+  const claims: string[] = [];
+  for (const f of findings) {
+    for (const c of f.claims ?? []) {
+      claims.push(`- (${f.workerId}) ${c.statement}`);
+      if (claims.length >= maxClaims) break;
+    }
+    if (claims.length >= maxClaims) break;
+  }
+  const srcPath = SOURCES();
+  let srcLine = "";
+  if (existsSync(srcPath)) {
+    const recs: import("../lib/types.js").SourceRecord[] = JSON.parse(readFileSync(srcPath, "utf8"));
+    const dates = recs.map((r) => r.fetchedAt).sort();
+    srcLine = `\n${recs.length} sources already consulted` + (dates.length ? ` (oldest ${dates[0].slice(0, 10)}, newest ${dates[dates.length - 1].slice(0, 10)}).` : ".");
+  }
+  return `ALREADY ESTABLISHED (do not re-derive — only fill gaps or refresh if stale):\n${claims.join("\n")}${srcLine}`;
+}
+
 // ── Decisions ────────────────────────────────────────────────────────────────
 export function saveDecision(d: Decision): string {
   const path = resolve(MEM, "decisions", `${d.id}.json`);
