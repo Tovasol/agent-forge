@@ -6,6 +6,7 @@ import {
   type ScoreResult,
 } from "./scoring";
 import { BookingEmbed } from "./BookingEmbed";
+import { FounderCard } from "./FounderCard";
 import { track } from "./analytics";
 import { DISCOVERY_CALL_LABEL } from "./config";
 
@@ -254,6 +255,7 @@ export function Scorecard() {
             Your score puts you in the danger zone. On the call we'll pinpoint the
             single change that buys back the most trust, fastest — no pitch deck.
           </p>
+          <FounderCard />
           <BookingEmbed email={email} name={company} source="scorecard-at-risk" />
         </div>
       ) : (

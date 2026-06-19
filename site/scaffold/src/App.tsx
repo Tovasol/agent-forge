@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Scorecard } from "./Scorecard";
 import { BookingEmbed } from "./BookingEmbed";
+import { FounderCard } from "./FounderCard";
 import { track } from "./analytics";
 import { BRAND, DISCOVERY_CALL_LABEL } from "./config";
 
@@ -289,6 +290,7 @@ export function App() {
           We'll look at your stack, tell you where the risk is, and whether we're
           the right team to own it. No pitch deck, no obligation.
         </p>
+        <FounderCard />
         <BookingEmbed source="primary-section" />
         <p className="book-security">
           🔒 Your data never leaves your warehouse. We work with scoped,

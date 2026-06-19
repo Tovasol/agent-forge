@@ -1,11 +1,12 @@
 {
   "_comment": "Builder harness checklist. The agent works one feature at a time and sets passes:true ONLY after verifying. Do not delete features to make this pass.",
-  "_humanGated": "Three values require a human before production launch and cannot be created by the builder: (1) the real Cal.com event-type slug — set VITE_CAL_LINK in the Pages build env; (2) the Cloudflare Web Analytics beacon token — set VITE_CF_BEACON_TOKEN; (3) production secrets RESEND_API_KEY / RESEND_FROM and CRM_SHEET_ID / GOOGLE_SA_EMAIL / GOOGLE_SA_KEY. The code is fully wired for all three and degrades gracefully (logs, no dead-ends) when they are unset. og.png is now a real generated asset committed in public/.",
+  "_humanGated": "Four values require a human before production launch and cannot be created by the builder without fabricating data: (1) the real Cal.com event-type slug — set VITE_CAL_LINK in the Pages build env; (2) the Cloudflare Web Analytics beacon token — set VITE_CF_BEACON_TOKEN; (3) production secrets RESEND_API_KEY / RESEND_FROM and CRM_SHEET_ID / GOOGLE_SA_EMAIL / GOOGLE_SA_KEY; (4) the real founder identity — set VITE_FOUNDER_NAME (and optionally VITE_FOUNDER_CREDENTIAL) and drop a real headshot at public/founder.jpg (or set VITE_FOUNDER_PHOTO). The code is fully wired for all four and degrades gracefully (logs, no dead-ends, and the founder card simply does not render — never an invented person) when they are unset. og.png is a real generated asset committed in public/.",
   "features": [
     { "id": "hero-booking-primary", "title": "Hero with managed-team value prop + 'Book a 20-min discovery call' as primary above-fold CTA", "passes": true },
     { "id": "positioning", "title": "Managed-team (not-a-tool) positioning vs Fivetran made explicit", "passes": true },
     { "id": "icp", "title": "ICP named on-page (stage/stack/team size) + 'Not a fit if…' qualifier", "passes": true },
     { "id": "social-proof", "title": "Honest pre-launch trust layer (stack/partner badges, founding-cohort offer, founder credentials, security/SOC 2 posture); no fabricated customers, stats, or builder notes", "passes": true },
+    { "id": "founder-card", "title": "Named founder card (photo + name + one-line credential) beside hero and scorecard-at-risk booking embeds; env-gated to VITE_FOUNDER_NAME so no invented person ever renders", "passes": true },
     { "id": "problem-section", "title": "Problem section: cost of 3am pages / silent data drift", "passes": true },
     { "id": "how-it-works", "title": "How-It-Works 3-step: Audit -> Build -> Manage", "passes": true },
     { "id": "outcomes", "title": "Outcomes/benefits section", "passes": true },
