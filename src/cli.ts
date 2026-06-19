@@ -27,6 +27,7 @@ import { createIdea, listIdeas, loadIdea, loadIdeaSpec, getMetrics, updateMetric
 import { runIdeaLoop, pivotIdea, killIdea } from "./harness/loop-executor.js";
 import { importPriorWork } from "./harness/loop-import.js";
 import { initIdeaFromBrief } from "./harness/loop-init.js";
+import { discussIdea } from "./harness/loop-discuss.js";
 import { runMetaCycle, revertSpec, specVersions } from "./harness/meta-loop.js";
 import { writeSpecDoc } from "./harness/spec-doc.js";
 import { runGrowthCycle, reportBacklog } from "./agents/grow.js";
@@ -121,6 +122,11 @@ async function main() {
     const id = rest[0] || activeIdea()?.id;
     if (!id) { log.error("idea", "No idea id given and no active idea found."); return; }
     if (sub === "run") { await runIdeaLoop(cfg, id); return; }
+    if (sub === "discuss" || sub === "chat") {
+      const stageArg = arg("--stage");
+      await discussIdea(cfg, id, stageArg ? { stage: stageArg } : {});
+      return;
+    }
     if (sub === "step") { await runIdeaLoop(cfg, id, { singleStage: true }); return; }
     if (sub === "status") {
       const rec = loadIdea(id);
