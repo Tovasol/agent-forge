@@ -45,14 +45,10 @@
       }
     </script>
 
-    <!-- Cloudflare Web Analytics (cookieless). Set the real token in the Pages
-         dashboard env (VITE replaces it at build); leaving the placeholder is a
-         no-op locally. Replace CF_BEACON_TOKEN before launch. -->
-    <script
-      defer
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "CF_BEACON_TOKEN"}'
-    ></script>
+    <!-- Cloudflare Web Analytics (cookieless) is injected here at build time by
+         the cfBeacon() plugin in vite.config.ts, ONLY when VITE_CF_BEACON_TOKEN
+         is set in the Pages build env. With no token, nothing is emitted (no
+         broken literal shipped). __CF_BEACON__ -->
   </head>
   <body>
     <div id="root"></div>

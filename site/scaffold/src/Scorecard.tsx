@@ -4,7 +4,7 @@ import {
   TIER_META,
   scoreAnswers,
   type ScoreResult,
-} from "./scorecard";
+} from "./scoring";
 import { BookingEmbed } from "./BookingEmbed";
 import { track } from "./analytics";
 import { DISCOVERY_CALL_LABEL } from "./config";

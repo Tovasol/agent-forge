@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0b0e0c"/>
+  <rect x="1" y="1" width="1198" height="628" fill="none" stroke="#1f261d" stroke-width="2"/>
+  <text x="80" y="120" font-family="ui-monospace, Menlo, monospace" font-size="26" letter-spacing="6" fill="#5ef38c">&#9626; PIPELINEFORGE</text>
+  <text x="78" y="270" font-family="Inter, system-ui, sans-serif" font-size="78" font-weight="700" fill="#e8efe6">A managed <tspan fill="#5ef38c">team</tspan>,</text>
+  <text x="78" y="362" font-family="Inter, system-ui, sans-serif" font-size="78" font-weight="700" fill="#e8efe6">not just a tool.</text>
+  <text x="80" y="448" font-family="Inter, system-ui, sans-serif" font-size="32" fill="#8b958a">We own the on-call, the fixes, and the schema breakages —</text>
+  <text x="80" y="492" font-family="Inter, system-ui, sans-serif" font-size="32" fill="#8b958a">so your engineers never get paged at 3am.</text>
+  <text x="80" y="566" font-family="ui-monospace, Menlo, monospace" font-size="24" fill="#5ef38c">Done-for-you data pipeline reliability · Book a 20-min discovery call</text>
+</svg>

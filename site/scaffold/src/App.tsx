@@ -65,35 +65,38 @@ export function App() {
         </p>
       </section>
 
-      {/* ── Social proof: named customers + attributed testimonial ─────── */}
-      <section className="proof-band" aria-label="Customer proof">
-        <p className="proof-eyebrow">Trusted by data teams who can't afford to be wrong</p>
+      {/* ── Trust layer: honest pre-launch signals (no invented customers) ─
+          We have no clients to name yet, so we show only verifiable trust
+          signals: the stack we operate, the founder's track record, the
+          security posture, and an honest founding-cohort offer. We do NOT
+          ship fabricated logos, testimonials, or quantified results. */}
+      <section className="proof-band" aria-label="What we work with">
+        <p className="proof-eyebrow">Built on the stack you already run</p>
         <div className="logos" role="list">
-          {/* Wordmark placeholders — swap for real client SVGs as they sign. */}
-          <span className="logo" role="listitem">Northwind</span>
-          <span className="logo" role="listitem">Cadence</span>
-          <span className="logo" role="listitem">Lumen&nbsp;Health</span>
-          <span className="logo" role="listitem">Repruv</span>
-          <span className="logo" role="listitem">Tessl</span>
+          <span className="logo" role="listitem">Snowflake</span>
+          <span className="logo" role="listitem">BigQuery</span>
+          <span className="logo" role="listitem">dbt</span>
+          <span className="logo" role="listitem">Airflow</span>
+          <span className="logo" role="listitem">AWS</span>
         </div>
 
-        <figure className="testimonial">
-          <blockquote>
-            “We went from a Slack channel full of ‘is the data broken again?’ to
-            not thinking about pipelines at all. PipelineForge cut our data
-            incidents by 80% in the first quarter and gave my two engineers their
-            weekends back.”
-          </blockquote>
-          <figcaption>
-            <span className="t-name">Priya Raman</span>
-            <span className="t-title">VP Data, Cadence (Series B B2B SaaS)</span>
-          </figcaption>
-        </figure>
+        <div className="founding">
+          <p className="founding-tag">Founding cohort — open</p>
+          <p className="founding-copy">
+            PipelineForge is new and taking on its <strong>first 3 clients</strong>{" "}
+            at founding-cohort terms. You get direct, senior attention from the
+            founder — a data engineer who has carried the pager for production
+            warehouses at venture-backed SaaS companies — and pricing locked for
+            the life of the engagement. We'd rather earn a handful of references
+            than borrow names we haven't worked with.
+          </p>
+        </div>
 
-        <p className="case-line">
-          Case study: <strong>How Cadence cut pipeline incidents 80%</strong> and
-          retired their on-call rotation in 9 weeks.
-        </p>
+        <ul className="trust-row" aria-label="Security and credibility">
+          <li><span className="trust-k">Your data stays put</span> We operate inside your warehouse and tooling — we never copy your data out.</li>
+          <li><span className="trust-k">Least-privilege access</span> Scoped, revocable credentials; everything we change is version-controlled and auditable.</li>
+          <li><span className="trust-k">SOC 2 path</span> Security practices built to a SOC 2 standard; formal report in progress.</li>
+        </ul>
       </section>
 
       {/* ── ICP: who this is for ───────────────────────────────────────── */}
@@ -287,6 +290,10 @@ export function App() {
           the right team to own it. No pitch deck, no obligation.
         </p>
         <BookingEmbed source="primary-section" />
+        <p className="book-security">
+          🔒 Your data never leaves your warehouse. We work with scoped,
+          revocable access — security practices built to a SOC 2 standard.
+        </p>
       </section>
 
       <footer className="foot">
