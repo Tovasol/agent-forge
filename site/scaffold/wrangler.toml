@@ -1,26 +1,26 @@
 #:schema node_modules/wrangler/config-schema.json
+# Cloudflare Pages project (hosting decision: Cloudflare Pages + Functions).
+# The lead-capture API lives in functions/api/lead.ts as a Pages Function —
+# there is no standalone Worker entrypoint. Run locally with:
+#   npm run build && npx wrangler pages dev dist
 name = "pipelineforge-site"
-main = "worker/index.ts"
 compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
 
-# Static assets (the Vite build output).
-[assets]
-directory = "dist"
-binding = "ASSETS"
-
-# ── CRM via Google Sheets (set as secrets, not here) ──
-# wrangler secret put GOOGLE_SA_EMAIL
-# wrangler secret put GOOGLE_SA_KEY
-# Put the non-secret sheet id in vars:
+# ── Non-secret vars (set in the Pages dashboard for production) ──
 [vars]
-# CRM_SHEET_ID = "your-sheet-id"
+# CRM_SHEET_ID  = "your-google-sheet-id"
+# RESEND_FROM   = "PipelineForge <hello@pipelineforge.io>"
 
-# ── Optional D1 fallback store ──
+# ── Secrets (DO NOT put values here) ──
+#   wrangler pages secret put GOOGLE_SA_EMAIL
+#   wrangler pages secret put GOOGLE_SA_KEY
+#   wrangler pages secret put RESEND_API_KEY
+
+# ── Optional D1 (only when server-side querying is needed; Sheets is the
+#    launch CRM). Uncomment + bind in the Pages dashboard to enable.
 # [[d1_databases]]
 # binding = "LEADS"
 # database_name = "leads"
 # database_id = "xxxxxxxx"
-
-# After `wrangler d1 create leads`, run the schema in worker/schema.sql:
-#   wrangler d1 execute leads --file=worker/schema.sql
