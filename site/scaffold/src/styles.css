@@ -1,23 +1,33 @@
 /* PipelineForge styles.
    Direction: technical precision for a serious data-infrastructure buyer.
-   Near-black ground, a single signal-green accent (the color of a passing
-   check), monospace for system/credibility cues, a clean grotesk for reading.
-   Restraint is the brand — clear, fast, credible, not a generic template. */
+   A light, trust-forward ground (the proven pattern for the mixed exec+
+   technical buying committee these competitors — Fivetran, STX Next, Addepto,
+   Intellias, Pythian — all use), a deep-ink foundation for credibility, and a
+   single signal-green accent (the color of a passing check) reserved for CTAs,
+   checks, and "solid" states. Monospace for system/credibility cues, a clean
+   grotesk for reading. Restraint is the brand — clear, fast, credible, and
+   read as a managed *service*, not a self-serve developer tool. */
 
 :root {
-  --bg: #0b0e0c;
-  --panel: #11150f;
-  --panel-2: #151a13;
-  --ink: #e8efe6;
-  --muted: #8b958a;
-  --line: #1f261d;
-  --signal: #5ef38c; /* passing-check green */
-  --signal-dim: #2f7a4d;
-  --warn: #ffcf5c;
-  --err: #ff7a7a;
+  --bg: #ffffff;
+  --bg-tint: #f6f8f7;       /* faint cool wash for alternating bands */
+  --panel: #ffffff;          /* cards on light ground */
+  --panel-2: #f4f7f5;        /* inset / option surfaces */
+  --ink: #0d1b16;            /* deep evergreen-ink: primary text + trust */
+  --ink-soft: #1f2d27;
+  --muted: #5d6b64;          /* readable secondary text on white */
+  --line: #e2e8e4;           /* hairline borders */
+  --signal: #16a34a;         /* passing-check green — accessible on white */
+  --signal-deep: #0f7a37;    /* hover / darker green */
+  --signal-dim: #b7e0c4;     /* tints, soft borders */
+  --signal-wash: #eaf7ee;    /* selected/feature backgrounds */
+  --warn: #b7791f;           /* amber, legible on white */
+  --err: #c0362c;            /* red, legible on white */
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
   --sans: "Inter", system-ui, -apple-system, sans-serif;
   --maxw: 980px;
+  --shadow-sm: 0 1px 2px rgba(13, 27, 22, 0.05);
+  --shadow-md: 0 6px 24px rgba(13, 27, 22, 0.07);
 }
 
 * { box-sizing: border-box; }
@@ -48,31 +58,32 @@ input:focus-visible {
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 0; border-bottom: 1px solid var(--line);
-  background: rgba(11, 14, 12, 0.82); backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
 }
-.mark { font-family: var(--mono); letter-spacing: 0.04em; color: var(--ink); font-size: 15px; }
+.mark { font-family: var(--mono); letter-spacing: 0.04em; color: var(--ink); font-size: 15px; font-weight: 600; }
 .topbar-cta {
-  font-family: var(--mono); font-size: 13px; color: var(--signal);
-  background: transparent; cursor: pointer;
-  border: 1px solid var(--signal-dim); padding: 8px 14px; border-radius: 5px;
+  font-family: var(--mono); font-size: 13px; color: #fff; font-weight: 600;
+  background: var(--signal); cursor: pointer;
+  border: 1px solid var(--signal); padding: 8px 14px; border-radius: 6px;
 }
-.topbar-cta:hover { background: rgba(94, 243, 140, 0.08); }
+.topbar-cta:hover { background: var(--signal-deep); border-color: var(--signal-deep); }
 
 /* ── Shared buttons ─────────────────────────────────────────────────────── */
 .btn-primary {
-  display: inline-block; background: var(--signal); color: #06210f;
-  border: 0; padding: 15px 24px; border-radius: 7px;
+  display: inline-block; background: var(--signal); color: #fff;
+  border: 0; padding: 15px 24px; border-radius: 8px;
   font-weight: 650; font-size: 16px; cursor: pointer; text-decoration: none;
-  transition: filter 0.15s ease, transform 0.05s ease;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
 }
-.btn-primary:hover { filter: brightness(1.07); }
+.btn-primary:hover { background: var(--signal-deep); box-shadow: var(--shadow-md); }
 .btn-primary:active { transform: translateY(1px); }
 .btn-ghost {
   display: inline-block; color: var(--ink); text-decoration: none;
-  border: 1px solid var(--line); padding: 15px 22px; border-radius: 7px;
-  font-size: 15px; background: var(--panel);
+  border: 1px solid var(--line); padding: 15px 22px; border-radius: 8px;
+  font-size: 15px; background: var(--panel); font-weight: 500;
 }
-.btn-ghost:hover { border-color: var(--signal-dim); }
+.btn-ghost:hover { border-color: var(--signal); color: var(--signal-deep); }
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 .hero { padding: 84px 0 56px; }
@@ -88,8 +99,8 @@ input:focus-visible {
 
 /* ── Trust / proof band ─────────────────────────────────────────────────── */
 .proof-band {
-  border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
-  padding: 32px 28px; margin: 8px 0 64px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bg-tint);
+  padding: 32px 28px; margin: 8px 0 64px; box-shadow: var(--shadow-sm);
 }
 .proof-eyebrow {
   font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em;
@@ -142,19 +153,20 @@ input:focus-visible {
 .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .problem-item {
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px;
+  box-shadow: var(--shadow-sm);
 }
-.problem-item h3 { margin: 0 0 10px; font-size: 17px; color: var(--signal); }
+.problem-item h3 { margin: 0 0 10px; font-size: 17px; color: var(--ink); }
 .problem-item p { margin: 0; color: var(--muted); font-size: 15px; }
 
 /* ── How it works steps ─────────────────────────────────────────────────── */
 .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
 .step {
   position: relative; background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; padding: 24px 24px 22px;
+  border-radius: 10px; padding: 24px 24px 22px; box-shadow: var(--shadow-sm);
 }
 .step-n {
-  font-family: var(--mono); font-size: 13px; color: var(--signal-dim);
-  display: block; margin-bottom: 8px;
+  font-family: var(--mono); font-size: 13px; color: var(--signal);
+  display: block; margin-bottom: 8px; font-weight: 600;
 }
 .step h3 { margin: 0 0 8px; font-size: 19px; }
 .step p { margin: 0 0 14px; color: var(--muted); }
@@ -168,6 +180,7 @@ input:focus-visible {
 .outcome-list li {
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
   padding: 18px 20px; color: var(--muted); position: relative; padding-left: 44px;
+  box-shadow: var(--shadow-sm);
 }
 .outcome-list li::before {
   content: "✓"; position: absolute; left: 18px; top: 18px;
@@ -181,10 +194,14 @@ input:focus-visible {
   position: relative; background: var(--panel); border: 1px solid var(--line);
   border-radius: 12px; padding: 26px 22px;
 }
-.price-card.featured { border-color: var(--signal-dim); box-shadow: 0 0 0 1px var(--signal-dim) inset; }
+.price-card { box-shadow: var(--shadow-sm); }
+.price-card.featured {
+  border-color: var(--signal); background: var(--signal-wash);
+  box-shadow: 0 0 0 1px var(--signal) inset, var(--shadow-md);
+}
 .price-tag {
   position: absolute; top: -11px; left: 22px; font-family: var(--mono); font-size: 11px;
-  letter-spacing: 0.08em; text-transform: uppercase; background: var(--signal); color: #06210f;
+  letter-spacing: 0.08em; text-transform: uppercase; background: var(--signal); color: #fff;
   padding: 3px 10px; border-radius: 999px;
 }
 .price-card h3 { margin: 0 0 10px; font-size: 18px; }
@@ -196,7 +213,7 @@ input:focus-visible {
 /* ── Scorecard (card + phases) ──────────────────────────────────────────── */
 .card {
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 28px; max-width: 720px;
+  padding: 28px; max-width: 720px; box-shadow: var(--shadow-md);
 }
 .scorecard .sc-step { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
 .sc-prompt { font-size: 20px; margin: 4px 0 18px; }
@@ -209,7 +226,7 @@ input:focus-visible {
   font-size: 15px; transition: border-color 0.12s ease, background 0.12s ease;
 }
 .sc-option:hover { border-color: var(--signal-dim); }
-.sc-option.selected { border-color: var(--signal); background: rgba(94, 243, 140, 0.08); }
+.sc-option.selected { border-color: var(--signal); background: var(--signal-wash); }
 .sc-nav { display: flex; justify-content: space-between; margin-top: 18px; }
 .sc-back, .sc-next {
   background: transparent; border: 1px solid var(--line); color: var(--muted);
@@ -307,14 +324,14 @@ input:focus-visible {
 .founder-card.compact { padding: 8px 12px; gap: 10px; }
 .founder-photo {
   flex: 0 0 auto; width: 52px; height: 52px; border-radius: 50%;
-  overflow: hidden; background: var(--signal-dim);
+  overflow: hidden; background: var(--signal);
   display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--line);
 }
 .founder-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.founder-initial { font-family: var(--mono); font-size: 22px; color: #06120a; font-weight: 700; }
+.founder-initial { font-family: var(--mono); font-size: 22px; color: #fff; font-weight: 700; }
 .founder-copy { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
-.founder-copy strong { color: var(--ink, #e8efe6); }
+.founder-copy strong { color: var(--ink, #0d1b16); }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 .foot {

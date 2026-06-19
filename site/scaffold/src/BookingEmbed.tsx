@@ -38,9 +38,9 @@ function CalEmbed({ email, name, source = "unknown" }: BookingEmbedProps) {
         const cal = await getCalApi();
         if (cancelled) return;
         cal("ui", {
-          theme: "dark",
+          theme: "light",
           cssVarsPerTheme: {
-            light: { "cal-brand": "#2f7a4d" },
+            light: { "cal-brand": "#16a34a" },
             dark: { "cal-brand": "#5ef38c" },
           },
           hideEventTypeDetails: false,
