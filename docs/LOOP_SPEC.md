@@ -1,6 +1,6 @@
 # Codified Idea-to-Profitability Loop — Specification
 
-> Generated from the live spec (v1, updated 2026-06-19T20:10:25.144Z).
+> Generated from the live spec (v1, updated 2026-06-19T20:15:23.649Z).
 > This document is derived from the same data records the executor runs, so it stays in sync with the code.
 
 Last change: Seed spec: codified idea-to-profitability loop with marketing woven in (S0–S9).
@@ -346,8 +346,10 @@ An outer evaluator-optimizer loop improves the framework over time: it scores ea
 ## Operator commands
 
 ```
-forge idea new "<your idea>"        # instantiate the loop for an idea
-forge idea new "<your idea>" --import  # ...and seed it from prior research/decisions in this folder
+forge idea                          # bootstrap the idea FROM config/brief.json (no retyping)
+forge idea --import                 # ...and also fold in prior research/decisions in this folder
+forge idea --import --run           # ...and immediately start walking the stages
+forge idea new "<your idea>"        # alternatively, instantiate from a typed hint
 forge idea import <id>              # fold earlier findings/decisions into an existing idea
 forge idea run <id>                 # walk it through stages until a gate needs you
 forge idea status <id>              # see stage progress + metrics

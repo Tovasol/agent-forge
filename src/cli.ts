@@ -26,6 +26,7 @@ import { snapshot, listSnapshots, rollback, lastGood } from "./harness/snapshot.
 import { createIdea, listIdeas, loadIdea, loadIdeaSpec, getMetrics, updateMetrics, activeIdea } from "./harness/loop-memory.js";
 import { runIdeaLoop, pivotIdea, killIdea } from "./harness/loop-executor.js";
 import { importPriorWork } from "./harness/loop-import.js";
+import { initIdeaFromBrief } from "./harness/loop-init.js";
 import { runMetaCycle, revertSpec, specVersions } from "./harness/meta-loop.js";
 import { writeSpecDoc } from "./harness/spec-doc.js";
 import { runGrowthCycle, reportBacklog } from "./agents/grow.js";
@@ -82,6 +83,13 @@ async function main() {
   if (cmd === "idea") {
     const sub = process.argv[3];
     const rest = process.argv.slice(4).filter((a) => !a.startsWith("--"));
+    // No subcommand, or `idea init` → bootstrap from config/brief.json (the idea
+    // the operator already stated). Don't make them retype it.
+    if (!sub || sub === "init") {
+      const id = await initIdeaFromBrief(cfg, { importPrior: process.argv.includes("--import"), force: process.argv.includes("--force") });
+      if (process.argv.includes("--run")) await runIdeaLoop(cfg, id);
+      return;
+    }
     if (sub === "new" || sub === "launch") {
       const hint = rest.join(" ").trim();
       if (!hint) { log.error("idea", 'Give an idea: npm run forge -- idea new "<your idea>"'); return; }
