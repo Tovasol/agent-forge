@@ -6,6 +6,7 @@
 import type { ForgeConfig } from "../lib/types.js";
 import { loadState, addCost } from "./memory.js";
 import { log } from "../lib/log.js";
+import { status } from "./status.js";
 
 export class BudgetExceeded extends Error {}
 
@@ -15,6 +16,7 @@ export function recordSpend(cfg: ForgeConfig, usd?: number) {
   addCost(s, usd);
   const total = loadState().totalCostUsd;
   log.info("budget", `+ $${usd.toFixed(4)}  (run total ~ $${total.toFixed(4)})`);
+  status.spend(total);
   if (cfg.auth === "apikey" && total > cfg.maxBudgetUsd) {
     throw new BudgetExceeded(
       `Run spend ~$${total.toFixed(2)} exceeded cap $${cfg.maxBudgetUsd}. Aborting. ` +

@@ -21,6 +21,7 @@ import { launchVenture, resumeVenture, ventureStatus } from "./agents/venture/la
 import { buildProfile, reportProfile } from "./agents/venture/profile.js";
 import { buildRequirements, reportRequirements } from "./agents/venture/requirements.js";
 import { reviewVentureGates } from "./harness/venture-gates.js";
+import { runDashboard } from "./harness/dashboard.js";
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -80,6 +81,11 @@ async function main() {
     const interval = parseInt(arg("--interval") ?? "60", 10);
     const maxCycles = arg("--max-cycles") ? parseInt(arg("--max-cycles")!, 10) : undefined;
     await watch(cfg, { intervalMinutes: interval, maxCycles });
+    return;
+  }
+
+  if (cmd === "dash" || cmd === "dashboard" || cmd === "monitor") {
+    await runDashboard();
     return;
   }
 

@@ -40,6 +40,11 @@ export interface ForgeConfig {
   maxBudgetUsd: number;
   maxTurns: number;
   maxParallelWorkers: number;
+  // Ceiling on how many research facets the planner may create (NOT a target —
+  // the planner chooses the count from the topic; this only caps runaway).
+  maxResearchWorkers: number;
+  // How many gap-closing rounds the research phase may run (spawn-new / sharpen).
+  maxResearchRounds: number;
   autonomy: Autonomy;
   brief: Brief;
   research: {
@@ -65,6 +70,8 @@ export interface WorkerSpec {
 }
 
 // What a research worker must return (schema-enforced via prompt + validation).
+// Distilled, NOT a raw dump: claims with sources, plus what they MEAN for the
+// business and what to DO about them.
 export interface Finding {
   workerId: string;
   summary: string;
@@ -73,7 +80,28 @@ export interface Finding {
     evidenceUrl: string;
     confidence: "low" | "medium" | "high";
   }>;
+  implications: string[]; // what these findings mean for business success
+  nextActions: string[]; // concrete actionable steps derived from the findings
   openQuestions: string[];
+}
+
+// A persisted raw-source record (disk tier) so future research can skip what's
+// already covered. Lives on disk only — never loaded into the prompt context.
+export interface SourceRecord {
+  url: string;
+  facet: string; // which research facet surfaced it
+  snippet: string; // the material claim it supported
+  fetchedAt: string;
+}
+
+// The distilled synthesis the rest of the pipeline consumes (instead of raw findings).
+export interface ResearchSynthesis {
+  builtAt: string;
+  keyFindings: string[];
+  conclusions: string[];
+  nextActions: string[];
+  facetsCovered: string[];
+  saturationNote: string; // why research stopped (saturated / backstop)
 }
 
 // A scored option inside a decision artifact.

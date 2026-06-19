@@ -63,6 +63,11 @@ export function loadConfig(): ForgeConfig {
     // Subscription auth is more rate-sensitive than a pay-as-you-go API key,
     // so default to gentler concurrency there. Override with FORGE_MAX_PARALLEL_WORKERS.
     maxParallelWorkers: num("FORGE_MAX_PARALLEL_WORKERS", auth === "subscription" ? 2 : 4),
+    // Research stops on SATURATION (no new decision-relevant info arriving),
+    // judged per-round. These are generous BACKSTOPS / circuit breakers only —
+    // they should rarely decide the outcome. Raise them for very broad topics.
+    maxResearchWorkers: num("FORGE_MAX_RESEARCH_WORKERS", 12),
+    maxResearchRounds: num("FORGE_MAX_RESEARCH_ROUNDS", 4),
     autonomy,
     brief: loadBrief(),
     research: {

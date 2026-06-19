@@ -23,6 +23,8 @@ export interface RunOptions {
   /** Working directory the agent is allowed to touch. */
   cwd?: string;
   maxTurns?: number;
+  /** Live tool-activity callback (searches/fetches as the agent streams). */
+  onActivity?: (a: { kind: string; detail: string }) => void;
 }
 
 export interface RunResult {
@@ -180,6 +182,10 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
         const content = message.message?.content ?? [];
         for (const block of content) {
           if (block.type === "text") text += block.text;
+          // Surface tool activity live so long silent worker runs show progress.
+          else if (block.type === "tool_use" && opts.onActivity) {
+            opts.onActivity(describeToolUse(block));
+          }
         }
       } else if (message.type === "result") {
         raw = message;
@@ -194,6 +200,15 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
   } finally {
     restore();
   }
+}
+
+/** Turn a tool_use block into a short human line, e.g. 🔍 search: "…". */
+function describeToolUse(block: any): { kind: string; detail: string } {
+  const name: string = block.name ?? "tool";
+  const input = block.input ?? {};
+  if (/search/i.test(name)) return { kind: "search", detail: String(input.query ?? "").slice(0, 80) };
+  if (/fetch/i.test(name)) return { kind: "fetch", detail: String(input.url ?? "").slice(0, 80) };
+  return { kind: name, detail: JSON.stringify(input).slice(0, 60) };
 }
 
 /**

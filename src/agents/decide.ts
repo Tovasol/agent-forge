@@ -79,6 +79,8 @@ export async function runDecidePhase(cfg: ForgeConfig): Promise<Decision[]> {
             workerId: "_critic_guidance",
             summary: guidance,
             claims: [],
+            implications: [],
+            nextActions: [],
             openQuestions: [],
           } as Finding,
         ])

@@ -9,6 +9,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  rmSync,
 } from "node:fs";
 import { resolve, dirname } from "node:path";
 import type { Phase, Finding, Decision } from "../lib/types.js";
@@ -99,6 +100,73 @@ export function loadFindings(): Finding[] {
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .map((f) => JSON.parse(readFileSync(resolve(dir, f), "utf8")) as Finding);
+}
+
+/** Remove a saved finding so its facet re-runs next round (used when sharpening). */
+export function deleteFinding(workerId: string): void {
+  const path = resolve(MEM, "findings", `${workerId}.json`);
+  if (existsSync(path)) rmSync(path);
+}
+
+// ── Raw source ledger (DISK-ONLY tier) ───────────────────────────────────────
+// Persists every source that produced a material claim, so future research can
+// skip what's already covered. Append-only; never loaded into the prompt context.
+const SOURCES = () => resolve(MEM, "research", "sources.json");
+
+export function appendSources(records: import("../lib/types.js").SourceRecord[]): void {
+  if (!records.length) return;
+  const path = SOURCES();
+  ensureDir(path);
+  const existing: import("../lib/types.js").SourceRecord[] = existsSync(path)
+    ? JSON.parse(readFileSync(path, "utf8"))
+    : [];
+  const seen = new Set(existing.map((r) => r.url));
+  for (const r of records) if (!seen.has(r.url)) { existing.push(r); seen.add(r.url); }
+  writeFileSync(path, JSON.stringify(existing, null, 2));
+}
+
+export function loadSourceUrls(): Set<string> {
+  const path = SOURCES();
+  if (!existsSync(path)) return new Set();
+  const recs: import("../lib/types.js").SourceRecord[] = JSON.parse(readFileSync(path, "utf8"));
+  return new Set(recs.map((r) => r.url));
+}
+
+export function sourceCount(): number {
+  const path = SOURCES();
+  if (!existsSync(path)) return 0;
+  return (JSON.parse(readFileSync(path, "utf8")) as unknown[]).length;
+}
+
+// ── Research synthesis (distilled tier the pipeline consumes) ─────────────────
+export function saveSynthesis(s: import("../lib/types.js").ResearchSynthesis): string {
+  const path = resolve(MEM, "research", "synthesis.json");
+  ensureDir(path);
+  writeFileSync(path, JSON.stringify(s, null, 2));
+  // human-readable mirror
+  const md = [
+    `# Research synthesis`,
+    `_Built ${s.builtAt}. ${s.saturationNote}_`,
+    ``,
+    `## Key findings`,
+    ...s.keyFindings.map((f) => `- ${f}`),
+    ``,
+    `## Conclusions`,
+    ...s.conclusions.map((c) => `- ${c}`),
+    ``,
+    `## Recommended next actions`,
+    ...s.nextActions.map((a) => `- ${a}`),
+    ``,
+    `_Facets covered: ${s.facetsCovered.join(", ")}_`,
+  ].join("\n");
+  writeFileSync(resolve(MEM, "research", "synthesis.md"), md);
+  return path;
+}
+
+export function loadSynthesis(): import("../lib/types.js").ResearchSynthesis | null {
+  const path = resolve(MEM, "research", "synthesis.json");
+  if (!existsSync(path)) return null;
+  return JSON.parse(readFileSync(path, "utf8"));
 }
 
 // ── Decisions ────────────────────────────────────────────────────────────────

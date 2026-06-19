@@ -31,6 +31,7 @@
     "venture:requirements": "npm run forge -- venture requirements",
     "venture:status": "npm run forge -- venture status",
     "status": "npm run forge -- status",
+    "dash": "npm run forge -- dash",
     "doctor": "npm run forge -- doctor",
     "resume": "npm run forge -- resume",
     "typecheck": "tsc -p tsconfig.json --noEmit"
