@@ -42,8 +42,13 @@ This file tracks what's been built into Agent Forge across sessions, so any futu
 - Asset→capability map tests pass; real PDF + DOCX + TXT extraction verified end-to-end
 - CLI surface works: status/doctor/backlog/approvals/attribution/venture status/venture profile all run
 
-### Known follow-ups (not yet built)
-- Cloudflare Cron Trigger Worker to run `grow` on a schedule in your own infra
+### Resilience (added after first live run)
+- `runAgent` retries transient SDK crashes (process-exit-1, rate trips) with backoff (3x)
+- Research fan-out uses `Promise.allSettled` — one worker failing no longer aborts the run
+- Completed workers checkpoint to disk; a crashed run resumes and skips finished workers
+- Default research concurrency: 2 on subscription auth, 4 on apikey (rate-sensitivity)
+
+### Known follow-ups (not yet built)- Cloudflare Cron Trigger Worker to run `grow` on a schedule in your own infra
 - An n8n funnel-plumbing handoff (optional, if you adopt n8n for integrations)
 - Real ESP wiring in the build phase (currently a clearly-marked hook)
 - The SDK version in `package.json` is a placeholder `^0.1.0` — pin the current one (`npm view @anthropic-ai/claude-agent-sdk version`)

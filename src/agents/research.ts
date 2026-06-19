@@ -108,13 +108,45 @@ export async function runResearchPhase(cfg: ForgeConfig): Promise<Finding[]> {
 
   let findings: Finding[] = [];
   for (let attempt = 0; attempt <= MAX_REVISIONS; attempt++) {
-    log.step("research", `Running ${specs.length} workers (attempt ${attempt + 1})…`);
-    findings = await Promise.all(specs.map((s) => limit(() => runWorker(cfg, s))));
+    // Checkpoint resume: skip workers whose findings are already saved (e.g.
+    // after an earlier crash), unless we're in a revision pass.
+    const alreadyDone = new Set(loadFindings().map((f) => f.workerId));
+    const todo = attempt === 0 ? specs.filter((s) => !alreadyDone.has(s.id)) : specs;
+    if (todo.length < specs.length) {
+      log.info("research", `Resuming: ${specs.length - todo.length} worker(s) already saved, running ${todo.length}.`);
+    }
+    log.step("research", `Running ${todo.length} worker(s), max ${cfg.maxParallelWorkers} in parallel (attempt ${attempt + 1})…`);
+
+    // allSettled so one worker failing doesn't abort the others.
+    const results = await Promise.allSettled(todo.map((s) => limit(() => runWorker(cfg, s))));
+    const failed: string[] = [];
+    results.forEach((r, i) => {
+      if (r.status === "rejected") {
+        failed.push(todo[i].id);
+        log.error("worker:" + todo[i].id, `Failed after retries: ${String(r.reason).slice(0, 100)}`);
+      }
+    });
+
+    // Findings = everything saved so far (succeeded this pass + prior).
+    findings = loadFindings();
+    if (failed.length) {
+      log.warn(
+        "research",
+        `${failed.length}/${todo.length} worker(s) failed: ${failed.join(", ")}. Continuing with ${findings.length} finding(s).`
+      );
+    }
+
+    if (!findings.length) {
+      // Nothing succeeded at all — surface clearly instead of proceeding empty.
+      recordNote(loadState(), "research", "All research workers failed. Stopping so you can retry/resume.");
+      log.error("research", "All workers failed. Run `npm run research` again to retry the missing ones (saved ones are skipped).");
+      return [];
+    }
 
     const verdict = await critique(cfg, findings);
     log.info("critic", `verdict=${verdict.verdict} score=${verdict.score}`);
     if (verdict.verdict === "pass" || attempt === MAX_REVISIONS) {
-      recordNote(loadState(), "research", `Research accepted (score ${verdict.score}).`);
+      recordNote(loadState(), "research", `Research accepted (score ${verdict.score}, ${findings.length} findings).`);
       break;
     }
     // Sharpen the weakest workers using the critic's instructions.

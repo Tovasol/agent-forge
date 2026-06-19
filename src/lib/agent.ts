@@ -98,13 +98,49 @@ async function loadSdk(): Promise<any> {
   }
 }
 
+/** Is this the SDK's transient subprocess-transport crash (exit code 1)? */
+function isTransientTransportError(e: unknown): boolean {
+  const msg = (e as Error)?.message ?? String(e);
+  return (
+    /process exited with code 1/i.test(msg) ||
+    /Claude Code process exited/i.test(msg) ||
+    /ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|429|rate.?limit|overloaded/i.test(msg)
+  );
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /**
  * Run a single agent task to completion and return the final text.
  *
- * Uses the SDK's streaming `query()` generator. We accumulate assistant text
- * and read the terminal `result` message for usage/cost when present.
+ * Wraps the core call in retry-with-backoff so a transient subprocess crash or
+ * rate trip doesn't fail the task (and, via Promise.all upstream, the whole
+ * run). Retries up to 3 times with increasing, jittered delay.
  */
 export async function runAgent(opts: RunOptions): Promise<RunResult> {
+  const maxAttempts = 3;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await runAgentOnce(opts);
+    } catch (e) {
+      lastErr = e;
+      if (attempt < maxAttempts && isTransientTransportError(e)) {
+        const backoff = 1500 * 2 ** (attempt - 1) + Math.floor(Math.random() * 750);
+        log.warn(
+          "agent",
+          `Transient agent error (attempt ${attempt}/${maxAttempts}): ${(e as Error).message?.slice(0, 80)}. Retrying in ${Math.round(backoff / 1000)}s…`
+        );
+        await sleep(backoff);
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
+async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
   const restore = applyAuth(opts.cfg);
   try {
     const sdk = await loadSdk();

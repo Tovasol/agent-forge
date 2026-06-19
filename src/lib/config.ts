@@ -60,7 +60,9 @@ export function loadConfig(): ForgeConfig {
     },
     maxBudgetUsd: num("FORGE_MAX_BUDGET_USD", 25),
     maxTurns: num("FORGE_MAX_TURNS", 120),
-    maxParallelWorkers: num("FORGE_MAX_PARALLEL_WORKERS", 4),
+    // Subscription auth is more rate-sensitive than a pay-as-you-go API key,
+    // so default to gentler concurrency there. Override with FORGE_MAX_PARALLEL_WORKERS.
+    maxParallelWorkers: num("FORGE_MAX_PARALLEL_WORKERS", auth === "subscription" ? 2 : 4),
     autonomy,
     brief: loadBrief(),
     research: {
