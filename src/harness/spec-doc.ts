@@ -88,6 +88,8 @@ export function renderSpecDoc(spec: LoopSpec): string {
   L.push(``);
   L.push("```");
   L.push(`forge idea new "<your idea>"        # instantiate the loop for an idea`);
+  L.push(`forge idea new "<your idea>" --import  # ...and seed it from prior research/decisions in this folder`);
+  L.push(`forge idea import <id>              # fold earlier findings/decisions into an existing idea`);
   L.push(`forge idea run <id>                 # walk it through stages until a gate needs you`);
   L.push(`forge idea status <id>              # see stage progress + metrics`);
   L.push(`forge idea metric <id> k=v ...      # record real-world evidence (e.g. paying_clients=3)`);

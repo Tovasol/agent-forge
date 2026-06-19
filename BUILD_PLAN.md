@@ -82,3 +82,5 @@ Corrected master sequence (marketing is the spine, WTP validated AFTER a marketi
 - Phase A DONE: schema types (loop-schema.ts), safe gate evaluator (gate-eval.ts, fully tested incl. injection-safety), 10-stage marketing-woven seed (loop-seed.ts), versioned disk store + append-only archive + rollback (loop-spec-store.ts). All unit-tested. C1/C3 (marketing stages + WTP-after-demand) folded in. Next: Phase B executor.
 
 - Phases B,D,E,F DONE: executor (loop-executor.ts + agents/loop/run-stage.ts), three-layer memory (loop-memory.ts), self-improving meta-loop with hidden evaluator + regression gate + archive/rollback (meta-loop.ts), spec-doc generator (spec-doc.ts), CLI wired (idea/meta/spec-doc). All guardrails + control-flow unit-tested. Objective-hacking rejection verified.
+
+- BRIDGE ADDED: loop-import.ts reads prior pipeline state (findings/synthesis/decisions/venture) and folds it into a new idea's semantic+episodic memory; assesses per-stage sufficiency to pre-complete solid work (conservative; never pre-completes WTP/profit from research). CLI: `idea new --import`, `idea import <id>`. Deterministic parts unit-tested.

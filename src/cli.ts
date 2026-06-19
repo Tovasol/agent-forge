@@ -25,6 +25,7 @@ import { runOvernight } from "./harness/overnight.js";
 import { snapshot, listSnapshots, rollback, lastGood } from "./harness/snapshot.js";
 import { createIdea, listIdeas, loadIdea, loadIdeaSpec, getMetrics, updateMetrics, activeIdea } from "./harness/loop-memory.js";
 import { runIdeaLoop, pivotIdea, killIdea } from "./harness/loop-executor.js";
+import { importPriorWork } from "./harness/loop-import.js";
 import { runMetaCycle, revertSpec, specVersions } from "./harness/meta-loop.js";
 import { writeSpecDoc } from "./harness/spec-doc.js";
 import { runGrowthCycle, reportBacklog } from "./agents/grow.js";
@@ -85,8 +86,20 @@ async function main() {
       const hint = rest.join(" ").trim();
       if (!hint) { log.error("idea", 'Give an idea: npm run forge -- idea new "<your idea>"'); return; }
       const rec = createIdea(hint);
-      log.ok("idea", `Created idea "${rec.id}". Run it with: npm run forge -- idea run ${rec.id}`);
-      log.raw(`  It will walk the codified loop (niche → offer → channels → build → marketing → WTP → iterate → profit → scale), stopping at honest gates.`);
+      log.ok("idea", `Created idea "${rec.id}".`);
+      if (process.argv.includes("--import")) {
+        log.info("idea", "Importing prior research/decisions from this folder…");
+        await importPriorWork(cfg, rec.id);
+      } else {
+        log.raw(`  Run it with: npm run forge -- idea run ${rec.id}`);
+        log.raw(`  (To seed it from your existing research/decisions first: npm run forge -- idea import ${rec.id})`);
+      }
+      return;
+    }
+    if (sub === "import") {
+      const id = rest[0] || activeIdea()?.id;
+      if (!id) { log.error("idea", "Usage: idea import <id>  (or create one with: idea new \"...\" --import)"); return; }
+      await importPriorWork(cfg, id);
       return;
     }
     if (sub === "list") {
