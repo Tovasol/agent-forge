@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "deploy": "wrangler pages deploy dist --project-name pipelineforge-site --branch main --commit-dirty=true"
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "react": "^18.3.1",

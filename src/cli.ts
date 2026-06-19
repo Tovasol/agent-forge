@@ -11,8 +11,18 @@ import { loadConfig, validateConfig } from "./lib/config.js";
 import { authBanner } from "./lib/agent.js";
 import { log } from "./lib/log.js";
 import { runLoop, resumeLoop } from "./harness/loop.js";
-import { loadState } from "./harness/memory.js";
-import type { Phase } from "./lib/types.js";
+import { loadState, lastProposal, reopenPhases, clearResearchPlan } from "./harness/memory.js";
+import {
+  listDirectives,
+  addDirective,
+  clearDirective,
+  clearAllDirectives,
+  classifyEarliestPhase,
+  cascadeFrom,
+} from "./harness/directives.js";
+import { PHASE_ORDER, type Phase } from "./lib/types.js";
+import { runOvernight } from "./harness/overnight.js";
+import { snapshot, listSnapshots, rollback, lastGood } from "./harness/snapshot.js";
 import { runGrowthCycle, reportBacklog } from "./agents/grow.js";
 import { reviewApprovals } from "./agents/approvals.js";
 import { runAttribution } from "./agents/attribution.js";
@@ -22,6 +32,7 @@ import { buildProfile, reportProfile } from "./agents/venture/profile.js";
 import { buildRequirements, reportRequirements } from "./agents/venture/requirements.js";
 import { reviewVentureGates } from "./harness/venture-gates.js";
 import { runDashboard } from "./harness/dashboard.js";
+import { addSteering, clearSticky, pendingCount, stickyText } from "./harness/steering.js";
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -53,6 +64,40 @@ async function main() {
   if (cmd === "status") return status();
   if (cmd === "init") return init();
 
+  // `tell` is a lightweight, separate-process command (writes to the steering
+  // inbox the running engine reads). No auth/config banner needed.
+  if (cmd === "tell") {
+    if (process.argv.includes("--clear")) {
+      clearSticky();
+      log.ok("steer", "Cleared standing guidance.");
+      return;
+    }
+    if (process.argv.includes("--show")) {
+      const sticky = stickyText();
+      log.raw(`Pending one-shot messages: ${pendingCount()}`);
+      log.raw(sticky ? `Standing guidance:\n${sticky}` : "No standing guidance.");
+      return;
+    }
+    const sticky = process.argv.includes("--sticky");
+    const urgent = process.argv.includes("--now");
+    const msg = process.argv.slice(3).filter((a) => !a.startsWith("--")).join(" ");
+    if (!msg.trim()) {
+      log.error("steer", 'Give a message: npm run forge -- tell "I updated the API key, retry the deploy"');
+      log.raw("  flags: --now (interrupt current step) · --sticky (standing guidance) · --clear · --show");
+      return;
+    }
+    addSteering(msg.trim(), { sticky, urgent });
+    log.ok(
+      "steer",
+      urgent
+        ? "Sent. The engine will interrupt the current step and apply it."
+        : sticky
+          ? "Added to standing guidance (applies to every step until --clear)."
+          : "Queued. The engine will apply it on the next step."
+    );
+    return;
+  }
+
   const problems = validateConfig(cfg);
   if (problems.length) {
     for (const p of problems) log.warn("config", p);
@@ -72,6 +117,125 @@ async function main() {
       process.exit(1);
     }
     await runLoop(cfg, phase, { fresh: process.argv.includes("--fresh") });
+    return;
+  }
+
+  // ── Persistent operator decisions that re-align the plan (the domino) ───────
+  if (cmd === "directive" || cmd === "decision" || cmd === "pivot") {
+    if (process.argv.includes("--list")) {
+      const ds = listDirectives();
+      if (!ds.length) log.raw("No standing decisions.");
+      for (const d of ds) log.raw(`  ${d.id}  [from ${d.fromPhase}]  ${d.text}`);
+      return;
+    }
+    if (process.argv.includes("--clear")) {
+      const id = arg("--clear");
+      if (id && id !== "true") {
+        log.ok("directive", clearDirective(id) ? `Removed ${id}.` : `No directive ${id}.`);
+      } else {
+        clearAllDirectives();
+        log.ok("directive", "Cleared all standing decisions.");
+      }
+      return;
+    }
+    const text = process.argv.slice(3).filter((a) => !a.startsWith("--")).join(" ").trim();
+    if (!text) {
+      log.error("directive", 'Give a decision: npm run forge -- decision "site should have a professional, bright design"');
+      log.raw("  flags: --from <research|decide|build|deploy|optimize> (override impact) · --apply (rebuild now) · --list · --clear [id]");
+      return;
+    }
+    const fromArg = arg("--from") as Phase | undefined;
+    const fromPhase: Phase = fromArg && PHASE_ORDER.includes(fromArg) ? fromArg : classifyEarliestPhase(text);
+    const d = addDirective(text, fromPhase);
+
+    const cascade = cascadeFrom(fromPhase);
+    // A research-level pivot re-plans research (keeps sources as reference).
+    if (fromPhase === "research") clearResearchPlan();
+    reopenPhases(cascade);
+
+    log.ok("directive", `Recorded decision ${d.id} (affects from "${fromPhase}").`);
+    log.raw(
+      `  This decision is now binding on every agent. Re-aligning these phases: ${cascade.join(" → ")}.\n` +
+        `  ${fromPhase === "research" ? "Research will RE-PLAN with this lens; " : ""}each phase redoes in alignment.`
+    );
+    if (process.argv.includes("--apply")) {
+      log.info("directive", "Applying now — rebuilding in alignment…");
+      await runLoop(cfg, "all");
+    } else {
+      log.raw("  Run `npm run iterate` (or `npm run resume`) to rebuild in alignment.");
+    }
+    return;
+  }
+
+  // ── Snapshots & rollback (safeguard against bad autonomous passes) ──────────
+  if (cmd === "snapshots" || cmd === "snapshot") {
+    if (cmd === "snapshot") {
+      const label = process.argv.slice(3).filter((a) => !a.startsWith("--")).join(" ") || "manual snapshot";
+      const h = snapshot(label, { markGood: process.argv.includes("--good") });
+      log.raw(h ? `Snapshot ${h} created.` : "Nothing to snapshot (no changes).");
+      return;
+    }
+    const snaps = listSnapshots(20);
+    if (!snaps.length) {
+      log.raw("No snapshots yet. They're created automatically on phase/deploy/overnight progress.");
+      return;
+    }
+    const good = lastGood();
+    log.raw("Recent snapshots (newest first):");
+    for (const s of snaps) log.raw(`  ${s.hash}${good && s.hash === good ? " ★good" : "     "}  ${s.when.padEnd(16)}  ${s.subject}`);
+    log.raw(`\nRoll back with:  npm run forge -- rollback [--to <hash>]   (defaults to the last ★good state)`);
+    return;
+  }
+  if (cmd === "rollback") {
+    const to = arg("--to");
+    const okRb = rollback(to);
+    if (okRb) log.raw("Done. Review site/scaffold, then `npm run forge -- run --phase deploy` to re-publish the restored version.");
+    return;
+  }
+
+  // ── Overnight: unattended, bounded self-improvement loop ────────────────────
+  if (cmd === "overnight" || cmd === "autoloop") {
+    const hours = parseFloat(arg("--hours") ?? "8");
+    const maxPasses = parseInt(arg("--max-passes") ?? "12", 10);
+    const allowDeploy = process.argv.includes("--deploy");
+    const spendCeilingUsd = parseFloat(arg("--spend-ceiling") ?? "0");
+    await runOvernight(cfg, { hours, maxPasses, allowDeploy, spendCeilingUsd });
+    return;
+  }
+
+  // ── Iterate: another improvement pass over a completed run ───────────────────
+  // Keeps all artifacts; re-opens phases so each re-examines its work and
+  // improves in place (idempotent-by-inspection). Applies the latest optimize
+  // proposal by injecting it as guidance. Add --deep to also refresh research.
+  if (cmd === "iterate" || cmd === "improve" || cmd === "loop") {
+    const s = loadState();
+    if (!s.completedPhases.includes("optimize")) {
+      log.warn(
+        "iterate",
+        "The pipeline hasn't completed a full pass yet. Finish with `npm run resume` first, then iterate."
+      );
+      return;
+    }
+    // Apply the most recent optimization proposal on this pass.
+    const proposal = lastProposal();
+    if (proposal) {
+      addSteering(
+        `Apply this approved optimization this pass, then verify it: ${proposal}. ` +
+          `If it needs a copy/funnel/offer change, make it in the build; keep everything else intact.`
+      );
+      log.info("iterate", `Applying latest proposal this pass: ${proposal.slice(0, 100)}…`);
+    } else {
+      log.info("iterate", "No pending proposal found — running a general improvement & refresh pass.");
+    }
+    const deep = process.argv.includes("--deep");
+    // Re-open the improvement phases. Research is only re-opened with --deep
+    // (it resumes/fills gaps rather than redoing, but costs quota).
+    const phases: Phase[] = deep
+      ? ["research", "decide", "build", "deploy", "optimize"]
+      : ["decide", "build", "deploy", "optimize"];
+    reopenPhases(phases);
+    log.ok("iterate", `Re-opened: ${phases.join(", ")}. Running an improvement pass (progress preserved).`);
+    await runLoop(cfg, "all");
     return;
   }
 
@@ -143,7 +307,7 @@ async function main() {
 
   log.error("cli", `Unknown command "${cmd}".`);
   log.raw(
-    "Usage: forge <run|resume|status|doctor|init|grow|backlog|approvals|attribution|watch|venture> ...\n" +
+    "Usage: forge <run|resume|iterate|overnight|decision|snapshots|rollback|status|doctor|init|grow|backlog|approvals|attribution|watch|tell|dash|venture> ...\n" +
       '  venture launch "<hint>" | venture resume | venture gates | venture status'
   );
   process.exit(1);

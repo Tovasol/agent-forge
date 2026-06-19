@@ -78,6 +78,7 @@ export function loadConfig(): ForgeConfig {
     waitOnUsageLimit: bool("FORGE_WAIT_ON_USAGE_LIMIT", true),
     usagePollMinutes: num("FORGE_USAGE_POLL_MINUTES", 20),
     usageMaxWaitHours: num("FORGE_USAGE_MAX_WAIT_HOURS", 0),
+    siteUrl: env("FORGE_SITE_URL", ""),
     autonomy,
     brief: loadBrief(),
     research: {

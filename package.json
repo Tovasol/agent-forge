@@ -32,6 +32,12 @@
     "venture:status": "npm run forge -- venture status",
     "status": "npm run forge -- status",
     "dash": "npm run forge -- dash",
+    "tell": "npm run forge -- tell",
+    "iterate": "npm run forge -- iterate",
+    "decision": "npm run forge -- decision",
+    "overnight": "npm run forge -- overnight",
+    "snapshots": "npm run forge -- snapshots",
+    "rollback": "npm run forge -- rollback",
     "doctor": "npm run forge -- doctor",
     "resume": "npm run forge -- resume",
     "typecheck": "tsc -p tsconfig.json --noEmit"

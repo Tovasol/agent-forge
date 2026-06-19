@@ -8,7 +8,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import type { Autonomy, GateRequest, Phase } from "../lib/types.js";
 import { log } from "../lib/log.js";
-import { loadState, saveState } from "./memory.js";
+import { loadState, saveState, recordNote } from "./memory.js";
 
 export class GateBlocked extends Error {
   constructor(public request: GateRequest) {
@@ -23,6 +23,21 @@ function gateApplies(autonomy: Autonomy, kind: GateRequest["kind"]): boolean {
   return kind === "spend" || kind === "deploy";
 }
 
+// ── Overnight / unattended policy ────────────────────────────────────────────
+// When running unattended, a gate must NOT freeze the whole night. This policy
+// lets the overnight loop decide gate outcomes deterministically:
+//   - deploy: auto-approve only if the operator opted into auto-deploy.
+//   - spend:  auto-approve only up to a ceiling; above it, decline (skip), not stop.
+//   - else:   skip (decline) rather than block.
+interface OvernightPolicy {
+  allowDeploy: boolean;
+  spendCeilingUsd: number;
+}
+let overnightPolicy: OvernightPolicy | null = null;
+export function setOvernightPolicy(p: OvernightPolicy | null) {
+  overnightPolicy = p;
+}
+
 export async function requestGate(
   autonomy: Autonomy,
   req: GateRequest
@@ -30,6 +45,32 @@ export async function requestGate(
   if (!gateApplies(autonomy, req.kind)) {
     log.info("gate", `Auto-passing ${req.kind} gate: ${req.title}`);
     return true;
+  }
+
+  // Unattended overnight policy: resolve gates without freezing the night.
+  if (overnightPolicy) {
+    if (req.kind === "deploy") {
+      const ok = overnightPolicy.allowDeploy;
+      log.info("gate", ok ? "Overnight: auto-approving deploy (opted in)." : "Overnight: skipping deploy (no opt-in) — will deploy in the morning.");
+      return ok;
+    }
+    if (req.kind === "spend") {
+      const ok = (req.estimatedCostUsd ?? 0) <= overnightPolicy.spendCeilingUsd;
+      log.info(
+        "gate",
+        ok
+          ? `Overnight: auto-approving spend $${(req.estimatedCostUsd ?? 0).toFixed(2)} (≤ $${overnightPolicy.spendCeilingUsd} ceiling).`
+          : `Overnight: declining spend $${(req.estimatedCostUsd ?? 0).toFixed(2)} (> $${overnightPolicy.spendCeilingUsd} ceiling) — deferring to you.`
+      );
+      if (!ok) {
+        const s = loadState();
+        recordNote(s, req.phase, `Overnight: deferred a spend request ($${(req.estimatedCostUsd ?? 0).toFixed(2)}): ${req.title} — ${req.detail}`);
+      }
+      return ok;
+    }
+    // Any other gate (identity/legal/etc.): never auto-pass unattended — skip it.
+    log.warn("gate", `Overnight: skipping ${req.kind} gate "${req.title}" (needs you). Deferred to morning.`);
+    return false;
   }
 
   const costLine =

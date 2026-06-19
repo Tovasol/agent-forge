@@ -7,7 +7,7 @@ import { runAgent } from "../lib/agent.js";
 import { prompt } from "../lib/prompts.js";
 import { log } from "../lib/log.js";
 import type { ForgeConfig } from "../lib/types.js";
-import { loadState, recordNote } from "../harness/memory.js";
+import { loadState, recordNote, deployedUrlPath, loadDeployedUrl, saveDeployedUrl } from "../harness/memory.js";
 import { requestGate } from "../harness/gates.js";
 import { recordSpend } from "../harness/budget.js";
 
@@ -58,21 +58,39 @@ export async function runDeployPhase(cfg: ForgeConfig): Promise<void> {
   }
 
   log.step("deploy", "Deploying via Wrangler…");
+  const urlPath = deployedUrlPath();
   const result = await runAgent({
     cfg,
     model: cfg.models.worker,
     systemPrompt: prompt("builder"),
     label: "deploy",
+    intent: "building → wrangler deploy → capturing the live URL",
     permissionMode: "acceptEdits",
     cwd: siteDir,
     allowedTools: ["Read", "Glob", "Grep", "Bash"],
     prompt:
       "Deploy this project to Cloudflare. Use the CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN " +
       "available in the environment. Run the production build, then `npx wrangler deploy`. " +
-      "Report the deployed URL and any follow-up steps. If a command fails, diagnose and retry once.",
+      "From wrangler's output, extract the LIVE deployed URL (the workers.dev URL or the custom " +
+      `domain/route it published to) and WRITE that URL — just the URL, on one line — to the file "${urlPath}". ` +
+      "Then report the deployed URL and any follow-up steps. If a command fails, diagnose and retry once.",
   });
   recordSpend(cfg, result.costUsd);
   log.raw("\n" + result.text + "\n");
-  recordNote(loadState(), "deploy", "Deploy session complete.");
+
+  // Persist the discovered URL: prefer the file the agent wrote; otherwise parse
+  // it from the agent's report. Either way the operator never has to set it.
+  let liveUrl = loadDeployedUrl();
+  if (!liveUrl) {
+    const m = result.text.match(/https?:\/\/[^\s"')]+\.(?:workers\.dev|pages\.dev)[^\s"')]*/) ||
+      result.text.match(/https?:\/\/[^\s"')]+/);
+    if (m) {
+      liveUrl = m[0];
+      saveDeployedUrl(liveUrl);
+    }
+  }
+  if (liveUrl) log.ok("deploy", `Live at ${liveUrl} (saved — self-validation will use it automatically).`);
+
+  recordNote(loadState(), "deploy", liveUrl ? `Deploy complete. Live URL: ${liveUrl}` : "Deploy session complete.");
   log.ok("deploy", "Deploy session finished.");
 }

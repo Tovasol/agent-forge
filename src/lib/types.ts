@@ -50,6 +50,7 @@ export interface ForgeConfig {
   waitOnUsageLimit: boolean;
   usagePollMinutes: number; // re-check interval when no reset time is given
   usageMaxWaitHours: number; // 0 = unlimited (run for days/weeks)
+  siteUrl: string; // live deployed URL, for self-validation (optional)
   autonomy: Autonomy;
   brief: Brief;
   research: {

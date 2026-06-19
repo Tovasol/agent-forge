@@ -17,6 +17,7 @@ import { BudgetExceeded } from "./budget.js";
 
 import { runResearchPhase } from "../agents/research.js";
 import { status } from "./status.js";
+import { snapshot } from "./snapshot.js";
 import { runDecidePhase } from "../agents/decide.js";
 import { runBuildPhase } from "../agents/build.js";
 import { runDeployPhase } from "../agents/deploy.js";
@@ -75,6 +76,8 @@ export async function runLoop(cfg: ForgeConfig, target: Phase | "all", opts: { f
       ranAny = true;
       status.note(`✓ ${phase} complete`);
       log.ok("loop", `✓ Phase complete: ${phase}`);
+      // SAFEGUARD: snapshot after each phase; a deployed state is known-good.
+      snapshot(`${phase} complete`, { markGood: phase === "deploy" });
     } catch (err) {
       if (err instanceof GateBlocked) {
         log.warn("loop", "Paused at a human gate. Decide, then run `npm run resume`.");

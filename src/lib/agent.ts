@@ -11,6 +11,12 @@
 import type { ForgeConfig } from "./types.js";
 import { log } from "./log.js";
 import { status } from "../harness/status.js";
+import { drainSteering, hasUrgent, clearUrgent } from "../harness/steering.js";
+import { activeDirectivesText, listDirectives } from "../harness/directives.js";
+
+function listDirectivesCount(): number {
+  return listDirectives().length;
+}
 
 export interface RunOptions {
   systemPrompt: string;
@@ -263,6 +269,10 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     try {
       return await runAgentTransient(opts);
     } catch (e) {
+      if (e instanceof SteeringInterrupt) {
+        log.info("steer", "Restarting the step with your guidance applied…");
+        continue; // re-run; drainSteering() injects the message on the next call
+      }
       if (cfgWaitsOnUsage(opts.cfg) && isUsageLimitError(e)) {
         await waitForUsageReset(opts, e);
         continue; // limit cleared — retry the whole task (checkpointed work is skipped)
@@ -293,6 +303,7 @@ async function runAgentTransient(opts: RunOptions): Promise<RunResult> {
       return await runAgentOnce(opts);
     } catch (e) {
       lastErr = e;
+      if (e instanceof SteeringInterrupt) throw e; // let runAgent restart it
       // Don't burn transient retries on a usage limit — let runAgent handle it.
       if (isUsageLimitError(e)) throw e;
       if (attempt < maxAttempts && isTransientTransportError(e)) {
@@ -327,6 +338,26 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
     let turns = 0;
     let costUsd: number | undefined;
     let raw: unknown;
+    let gotResult = false;
+
+    // Operator steering: pull any mid-run guidance and inject it so the agent
+    // follows it on this call (e.g. "I updated the API key — retry properly").
+    const steer = drainSteering();
+    // Standing operator DECISIONS (directives) are binding on every call.
+    const directives = activeDirectivesText();
+    const preamble = [directives, steer && `OPERATOR STEERING (mid-run guidance — follow this):\n${steer}`]
+      .filter(Boolean)
+      .join("\n\n");
+    const promptText = preamble
+      ? `${preamble}\n\n---\n\n${opts.prompt}`
+      : opts.prompt;
+    if (steer) {
+      log.info("steer", "Applying operator steering to this step.");
+      status.activity(`[${opts.label ?? "agent"}] 🧭 steering applied: ${steer.replace(/\s+/g, " ").slice(0, 80)}…`);
+    }
+    if (directives) {
+      status.activity(`[${opts.label ?? "agent"}] 📌 honoring ${listDirectivesCount()} standing decision(s)`);
+    }
 
     // Universal feedback: every agent call (not just research) reports activity.
     const label = opts.label ?? "agent";
@@ -346,18 +377,35 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
     // synthesize, profile) says WHAT it's doing instead of just spinning.
     if (opts.intent) emitActivity({ kind: "start", detail: opts.intent });
 
+    // Best-effort mid-stream interrupt: if the operator sends an URGENT steering
+    // message, abort this call so it restarts and picks up the guidance now.
+    const ac = new AbortController();
+    let interrupted = false;
+
     // Heartbeat: shows it's alive with elapsed seconds, turn count, and the last
-    // thing it did — so a silent thinking phase still reports progress.
+    // thing it did — so a silent thinking phase still reports progress. Also
+    // checks for an urgent steering interrupt.
     const beat = setInterval(() => {
       const secs = Math.round((Date.now() - startedAt) / 1000);
       status.note(`${label}: ${lastBeatMsg} · ${turns} turn(s) · ${secs}s`);
+      if (hasUrgent()) {
+        clearUrgent();
+        interrupted = true;
+        log.warn("steer", "Urgent steering received — interrupting current step to apply it.");
+        try {
+          ac.abort();
+        } catch {
+          /* abort may be unsupported; falls back to between-call injection */
+        }
+      }
     }, 4000);
 
     const stream = query({
-      prompt: opts.prompt,
+      prompt: promptText,
       options: {
         model: opts.model,
         systemPrompt: opts.systemPrompt,
+        abortController: ac,
         allowedTools,
         permissionMode: opts.permissionMode ?? "acceptEdits",
         cwd: opts.cwd ?? process.cwd(),
@@ -390,19 +438,35 @@ async function runAgentOnce(opts: RunOptions): Promise<RunResult> {
           }
         } else if (message.type === "result") {
           raw = message;
+          gotResult = true;
           costUsd = message.total_cost_usd ?? message.cost_usd;
           if (message.result && typeof message.result === "string") {
             text = message.result;
           }
         }
       }
+    } catch (e) {
+      // An abort (urgent steering) surfaces as an error from the stream; treat
+      // it as an interrupt-to-restart rather than a failure.
+      if (interrupted) throw new SteeringInterrupt();
+      throw e;
     } finally {
       clearInterval(beat);
     }
 
+    // If we were asked to interrupt and didn't already get a full result, restart.
+    if (interrupted && !gotResult) throw new SteeringInterrupt();
+
     return { text, turns, costUsd, raw };
   } finally {
     restore();
+  }
+}
+
+/** Thrown when the operator sends urgent steering mid-call; runAgent restarts. */
+export class SteeringInterrupt extends Error {
+  constructor() {
+    super("Interrupted by operator steering — restarting step.");
   }
 }
 

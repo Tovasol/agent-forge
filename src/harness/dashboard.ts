@@ -6,6 +6,7 @@
 // detach freely without touching the run.
 
 import { status, type EngineStatus, type FacetState } from "./status.js";
+import { pendingCount } from "./steering.js";
 
 const C = {
   reset: "\x1b[0m",
@@ -108,7 +109,11 @@ function frame(s: EngineStatus, tick: number, cols: number, rows: number): strin
   lines.push("");
 
   // Recent activity — WRAP long lines to terminal width, bounded by screen height.
-  lines.push(`  ${C.bold}Activity${C.reset} ${stale ? `${C.red}(no update >90s — may be paused/done)${C.reset}` : ""}`);
+  const steerN = pendingCount();
+  lines.push(
+    `  ${C.bold}Activity${C.reset} ${stale ? `${C.red}(no update >90s — may be paused/done)${C.reset}` : ""}` +
+      (steerN ? `  ${C.yellow}🧭 ${steerN} steering message(s) queued${C.reset}` : "")
+  );
   // Budget remaining vertical space for activity so the frame fits the screen.
   const reserved = lines.length + 2; // current lines + border + footer
   const activityBudget = Math.max(3, (rows || 24) - reserved);

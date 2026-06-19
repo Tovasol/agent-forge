@@ -3,64 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b0e0c" />
-
-    <!-- ── SEO ── -->
-    <title>Pipeline Reliability Scorecard — PipelineForge</title>
-    <meta
-      name="description"
-      content="Score your data pipeline reliability in 2 minutes. A free, interactive scorecard for Heads of Data at 20–200 person SaaS — get a tiered report and a prioritized fix list. The pipeline your team can actually trust."
-    />
-    <meta name="robots" content="index,follow" />
-    <link rel="canonical" href="https://pipelineforge.dev/" />
-
-    <!-- ── Open Graph ── -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="PipelineForge" />
-    <meta property="og:title" content="Pipeline Reliability Scorecard — PipelineForge" />
-    <meta
-      property="og:description"
-      content="Score your data pipeline reliability in 2 minutes and get a prioritized fix list. The pipeline your team can actually trust."
-    />
-    <meta property="og:url" content="https://pipelineforge.dev/" />
-    <meta property="og:image" content="https://pipelineforge.dev/og.png" />
-
-    <!-- ── Twitter ── -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Pipeline Reliability Scorecard — PipelineForge" />
-    <meta
-      name="twitter:description"
-      content="Score your data pipeline reliability in 2 minutes and get a prioritized fix list."
-    />
-    <meta name="twitter:image" content="https://pipelineforge.dev/og.png" />
-
-    <!--
-      ── PostHog (funnel analytics, free tier) ──
-      Per the analytics decision. EU-host option enabled by default for EU
-      prospects; switch api_host to https://us.i.posthog.com for US.
-      Replace __POSTHOG_KEY__ with the project key before launch. Until then the
-      snippet is inert (window.posthog stays undefined) and the funnel's
-      track()/identify() calls are safe no-ops.
-    -->
-    <script>
-      (function () {
-        var KEY = "__POSTHOG_KEY__";
-        if (!KEY || KEY.indexOf("__") === 0) return; // not configured yet
-        !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-        posthog.init(KEY, { api_host: "https://eu.i.posthog.com", person_profiles: "identified_only" });
-      })();
-    </script>
-
-    <!--
-      ── Cloudflare Web Analytics (free, day-one traffic) ──
-      Replace __CF_BEACON_TOKEN__ with the site token from the Cloudflare
-      dashboard. Inert until configured.
-    -->
-    <script
-      defer
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "__CF_BEACON_TOKEN__"}'
-    ></script>
+    <!-- Builder: fill real title/description/OG for the data-pipeline niche -->
+    <title>Reliable data pipelines, done for you</title>
+    <meta name="description" content="Done-for-you data pipeline service for B2B SaaS data teams." />
   </head>
   <body>
     <div id="root"></div>

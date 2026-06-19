@@ -79,6 +79,29 @@ export function markPhaseComplete(s: RunState, phase: Phase) {
   saveState(s);
 }
 
+/**
+ * Re-open phases for another improvement pass WITHOUT losing artifacts. Removes
+ * the given phases from completedPhases so the loop runs them again; because
+ * each phase is idempotent-by-inspection (research resumes/fills gaps, build
+ * inspects & improves in place, decide re-evaluates), this improves rather than
+ * rebuilds. Pass the phases you want re-examined.
+ */
+export function reopenPhases(phases: Phase[]): RunState {
+  const s = loadState();
+  s.completedPhases = s.completedPhases.filter((p) => !phases.includes(p));
+  s.currentPhase = null;
+  saveState(s);
+  return s;
+}
+
+/** The most recent optimization proposal text, if any (from recorded notes). */
+export function lastProposal(): string | null {
+  const s = loadState();
+  const notes = (s.log ?? []).filter((n) => /^Proposal:/.test(n.note));
+  if (!notes.length) return null;
+  return notes[notes.length - 1].note.replace(/^Proposal:\s*/, "").trim();
+}
+
 export function addCost(s: RunState, usd?: number) {
   if (typeof usd === "number" && Number.isFinite(usd)) {
     s.totalCostUsd = Math.round((s.totalCostUsd + usd) * 1e6) / 1e6;
@@ -188,6 +211,36 @@ export function loadPlan(): import("../lib/types.js").WorkerSpec[] | null {
   } catch {
     return null;
   }
+}
+
+/** Remove only the persisted research plan so research RE-PLANS (keeps the
+ *  source ledger as reference). Used when a directive pivots the research lens. */
+export function clearResearchPlan(): void {
+  const p = PLAN_PATH();
+  if (existsSync(p)) rmSync(p);
+}
+
+// ── Deployed site URL (captured from the deploy, so we don't ask the operator) ─
+const DEPLOY_URL_PATH = () => resolve(MEM, "deploy", "live-url.txt");
+
+/** Absolute path the deploy agent writes its discovered live URL to. */
+export function deployedUrlPath(): string {
+  return DEPLOY_URL_PATH();
+}
+
+export function saveDeployedUrl(url: string): void {
+  const p = DEPLOY_URL_PATH();
+  ensureDir(p);
+  writeFileSync(p, url.trim() + "\n");
+}
+
+/** The live URL captured at deploy time, if any (sanitized to a single https URL). */
+export function loadDeployedUrl(): string {
+  const p = DEPLOY_URL_PATH();
+  if (!existsSync(p)) return "";
+  const raw = readFileSync(p, "utf8").trim();
+  const m = raw.match(/https?:\/\/[^\s"')]+/);
+  return m ? m[0] : "";
 }
 
 /** Wipe all research artifacts for a clean restart (`--fresh`). */

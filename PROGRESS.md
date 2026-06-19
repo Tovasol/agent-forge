@@ -92,6 +92,37 @@ This file tracks what's been built into Agent Forge across sessions, so any futu
 - Graceful Ctrl-C: the run catches SIGINT, prints a "run `npm run resume` to continue" hint, lets in-flight writes settle, and exits; a second Ctrl-C force-quits. Completed work is always checkpointed.
 - Verified: resume-all runs the full remaining sequence and skips completed phases.
 
+### Iterating after a full pass (`npm run iterate`)
+- After a complete run (reached the optimize proposal), `npm run iterate` runs another IMPROVEMENT pass without losing progress: it re-opens decide→build→deploy→optimize (research stays as-is unless you pass `--deep`), injects the latest optimization proposal as guidance so the pass applies it, and relies on idempotency-by-inspection so each phase improves in place rather than rebuilding.
+- `npm run iterate -- --deep` also re-opens research (resumes/refreshes/fills gaps).
+- Guards: refuses to iterate until a full pass has completed (tells you to `npm run resume` first).
+- Honest dependency: improvement quality scales with real signal (traffic/conversion data). With no new data a pass mostly confirms current state and re-proposes; feed metrics, then iterate.
+- Verified: reopen keeps research + artifacts intact, removes the right phases, reads the latest proposal; guard fires on an incomplete run.
+
+### Persistent operator decisions that re-align the plan (`npm run decision`)
+- `npm run forge -- decision "<text>"` records a BINDING decision that (a) persists and is injected into every agent prompt from now on, and (b) cascades a redo of the earliest affected phase + everything downstream (the domino).
+- Impact is auto-classified: positioning/audience/offer/marketing/strategy → `research` (whole chain redoes); option/tool/stack/funnel choice → `decide`; design/copy/page/visual → `build`. Override with `--from <phase>`.
+- Examples: "site should have a professional, bright design" → build,deploy,optimize redo. "marketing should use Hormozi-style offers" → research re-PLANS (keeps sources as reference) and the entire chain re-aligns.
+- Flags: `--apply` (rebuild immediately), `--from <phase>` (override impact), `--list`, `--clear [id]`.
+- After a decision, run `npm run iterate` (or `--apply`) to rebuild in alignment. Decisions stack — every agent honors all active decisions.
+- Verified: classifier maps both example decisions correctly; cascade = fromPhase + downstream; decisions persist to disk and inject into prompts; research-level decision triggers a re-plan.
+
+### Unattended overnight self-improvement (`npm run overnight`)
+- `npm run forge -- overnight [--hours 8] [--max-passes 12] [--deploy] [--spend-ceiling 0]` runs a bounded, unattended loop: ensure a full pass, then repeatedly BENCHMARK the built (and, if deployed, LIVE) site against successful competitors → queue improvement directives at the correct phase → cascade-rebuild from there → repeat, until budget runs out or convergence (2 clean passes).
+- ADAPTIVE cascade: the benchmark routes each gap to the right stage — positioning/audience/market → research (full chain re-runs, research re-plans), offer/pricing/stack → decide, design/copy/cta/funnel/social-proof/performance → build. The deepest gap found in a pass sets how far back the redo cascades, so further research & new decisions DO happen when warranted — not just rebuilds.
+- Live self-validation: the deploy phase auto-CAPTURES the live URL from wrangler's output (writes it to `memory/deploy/live-url.txt`, with a parse-from-report fallback), so the benchmark self-validates the deployed site automatically — no need to set FORGE_SITE_URL. The env var is now just an optional override (e.g. a custom domain). Each pass fetches the live site to confirm it loads and the capture form works; breakages become urgent build fixes.
+- Gates don't freeze the night: deploy auto-approves only with --deploy; spends auto-approve only up to --spend-ceiling (default 0 = all spends deferred & recorded for you); identity/legal gates are skipped and deferred. Survives usage-limit pauses. Writes memory/MORNING.md.
+- Honest scope: improves site QUALITY/conversion-readiness vs competitors; cannot produce leads overnight (needs real traffic).
+- Verified: area→phase routing, deploy in/out of cascade, deepest-gap-wins, gate policy (deploy/spend/identity), convergence/maxPasses/deadline bounds.
+
+### Git snapshots & rollback (safeguard against bad autonomous passes)
+- The engine auto-commits durable progress (site/scaffold + valuable memory: findings, decisions, directives, research, benchmark, state) at milestones — after each phase, after deploy (marked good), and before/after every overnight pass.
+- SECRET-SAFE: it guarantees `.env` (and friends) are git-ignored before any commit — verified it never commits secrets. Transient noise (logs, status.json, steer) is excluded too.
+- Works without prior git setup: inits a local repo if needed, uses a local committer identity, and degrades gracefully if git is absent (logs + continues; snapshots are a safety net, not a hard dependency).
+- `npm run forge -- snapshots` lists restore points (★ marks the last known-good). `npm run forge -- rollback [--to <hash>]` restores site + memory to a snapshot (defaults to last-good); it first snapshots current state so rollback is itself reversible, then you re-deploy the restored version.
+- Optional `FORGE_GIT_PUSH=true` pushes snapshots to a configured remote for off-machine backup (local-only by default).
+- Verified end-to-end: secret protection, milestone commits, last-good tracking, and rollback restoring a deliberately-corrupted site.
+
 ### Known follow-ups (not yet built)
 - Cloudflare Cron Trigger Worker to run `grow` on a schedule in your own infra
 - An n8n funnel-plumbing handoff (optional, if you adopt n8n for integrations)

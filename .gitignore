@@ -1,15 +1,31 @@
-node_modules/
-dist/
+# ── Secrets & dependencies (NEVER commit) ──
 .env
-*.log
-memory/findings/*.json
-memory/decisions/*.json
-memory/runs/
-!memory/findings/.gitkeep
-!memory/decisions/.gitkeep
-.DS_Store
+.env.*
+!.env.example
+node_modules/
+**/node_modules/
+dist/
+**/dist/
 site/build/
+site/scaffold/dist/
 .wrangler/
+.DS_Store
+*.log
+
+# ── Transient runtime memory (noisy; not needed for rollback) ──
+memory/logs/
+memory/status.json
+memory/steer/
+memory/runs/
+
+# ── Operator context is private; keep examples only ──
 context/*
 !context/README.md
 !context/assets.example.txt
+
+# NOTE: durable progress IS versioned for rollback safety:
+#   site/scaffold, memory/findings, memory/decisions, memory/directives.json,
+#   memory/research, memory/benchmark, memory/venture, memory/state.json
+
+# ── Agent Forge safety (auto-added): protect secrets, skip noise ──
+site/scaffold/node_modules/
