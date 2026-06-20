@@ -1,6 +1,6 @@
 # Codified Idea-to-Profitability Loop — Specification
 
-> Generated from the live spec (v1, updated 2026-06-19T20:35:55.749Z).
+> Generated from the live spec (v1, updated 2026-06-19T21:47:05.463Z).
 > This document is derived from the same data records the executor runs, so it stays in sync with the code.
 
 Last change: Seed spec: codified idea-to-profitability loop with marketing woven in (S0–S9).
@@ -352,7 +352,7 @@ forge idea --import --run           # ...and immediately start walking the stage
 forge idea new "<your idea>"        # alternatively, instantiate from a typed hint
 forge idea import <id>              # fold earlier findings/decisions into an existing idea
 forge idea run <id>                 # walk it through stages until a gate needs you
-forge idea discuss <id> [--stage X]  # two-way conversation to iron out a stage's details
+forge idea discuss <id> [--stage X]  # two-way chat (ENTER sends, Alt+ENTER = newline); resumable
 forge idea status <id>              # see stage progress + metrics
 forge idea metric <id> k=v ...      # record real-world evidence (e.g. paying_clients=3)
 forge idea pivot <id> <stage>       # send it back to a stage; reopen downstream
