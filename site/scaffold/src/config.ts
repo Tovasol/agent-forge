@@ -47,13 +47,26 @@ export const BRAND = "PipelineForge";
 // at public/founder.jpg (or set VITE_FOUNDER_PHOTO to its path) for the photo.
 export const FOUNDER = {
   name: import.meta.env.VITE_FOUNDER_NAME || "",
-  // One-line credential. Editable; the default is a truthful, generic statement
-  // about the founder's background that holds for whoever the real founder is.
+  // One-line credential. Editable; the default is a truthful, de-identified
+  // statement of the delivery engineer's real background. Per the operator
+  // privacy decision (Option A): the company (Tovasol LLC) is the public-facing
+  // entity, and the senior engineer is described by verifiable capability, not
+  // identity — true, specific, non-doxxing. The discovery call is where the name
+  // comes out, privately, after the prospect has self-selected.
   credential:
     import.meta.env.VITE_FOUNDER_CREDENTIAL ||
-    "carried production-warehouse on-call at venture-backed SaaS",
+    "a principal engineer (15+ yrs) who architected data pipelines processing 120M+ records a day on AWS serverless and cut operational costs ~50%",
   photo: import.meta.env.VITE_FOUNDER_PHOTO || "/founder.jpg",
 } as const;
 
 /** True only when a real founder name has been supplied. */
 export const HAS_FOUNDER = FOUNDER.name.trim().length > 0;
+
+/**
+ * True when we have a credential to show even WITHOUT a name (Option A:
+ * de-identified principal-engineer trust card). Lets the page answer the
+ * buyer's "is there a real expert behind this?" question without revealing
+ * who the operator is. Honesty guardrail: only renders real, verifiable
+ * capability copy — never an invented person.
+ */
+export const HAS_CREDENTIAL = FOUNDER.credential.trim().length > 0;

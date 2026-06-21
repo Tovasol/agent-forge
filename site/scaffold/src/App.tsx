@@ -72,14 +72,11 @@ export function App() {
           security posture, and an honest founding-cohort offer. We do NOT
           ship fabricated logos, testimonials, or quantified results. */}
       <section className="proof-band" aria-label="What we work with">
-        <p className="proof-eyebrow">Built on the stack you already run</p>
-        <div className="logos" role="list">
-          <span className="logo" role="listitem">Snowflake</span>
-          <span className="logo" role="listitem">BigQuery</span>
-          <span className="logo" role="listitem">dbt</span>
-          <span className="logo" role="listitem">Airflow</span>
-          <span className="logo" role="listitem">AWS</span>
-        </div>
+        <p className="proof-eyebrow">An opinion, not just a pair of hands</p>
+        <p className="proof-line">
+          We start by auditing whether your current setup is actually the right
+          fit — then we own it, fix it, or tell you honestly what to change.
+        </p>
 
         <div className="founding">
           <p className="founding-tag">Founding cohort — open</p>
@@ -96,7 +93,6 @@ export function App() {
         <ul className="trust-row" aria-label="Security and credibility">
           <li><span className="trust-k">Your data stays put</span> We operate inside your warehouse and tooling — we never copy your data out.</li>
           <li><span className="trust-k">Least-privilege access</span> Scoped, revocable credentials; everything we change is version-controlled and auditable.</li>
-          <li><span className="trust-k">SOC 2 path</span> Security practices built to a SOC 2 standard; formal report in progress.</li>
         </ul>
       </section>
 
@@ -158,7 +154,7 @@ export function App() {
               ownership, testing, and trust. You get a prioritized fix-list whether
               or not we work together.
             </p>
-            <span className="step-meta">2–4 weeks · from $1,500</span>
+            <span className="step-meta">2–4 weeks · $2,500 fixed</span>
           </li>
           <li className="step">
             <span className="step-n">02</span>
@@ -168,7 +164,7 @@ export function App() {
               pipeline changes, and layered data tests — so failures are caught
               upstream, not in a board meeting.
             </p>
-            <span className="step-meta">2–3 months · from $8,000</span>
+            <span className="step-meta">2–3 months · from $9,000</span>
           </li>
           <li className="step">
             <span className="step-n">03</span>
@@ -178,7 +174,7 @@ export function App() {
               an ongoing retainer. Your engineers build features; we keep the data
               boring.
             </p>
-            <span className="step-meta">ongoing · from $3,500/mo</span>
+            <span className="step-meta">ongoing · from $4,500/mo</span>
           </li>
         </ol>
       </section>
@@ -217,7 +213,7 @@ export function App() {
         <div className="price-grid">
           <div className="price-card">
             <h3>Reliability Audit</h3>
-            <p className="price">from $1,500</p>
+            <p className="price">$2,500</p>
             <p className="price-term">2–4 weeks · fixed scope</p>
             <p className="price-desc">
               Full audit across 5 reliability dimensions and a prioritized fix-list.
@@ -227,7 +223,7 @@ export function App() {
           <div className="price-card featured">
             <span className="price-tag">Most start here</span>
             <h3>Build</h3>
-            <p className="price">from $8,000</p>
+            <p className="price">from $9,000</p>
             <p className="price-term">2–3 months · fixed scope</p>
             <p className="price-desc">
               We implement the fixes: monitoring, recovery automation, CI/CD, and
@@ -236,8 +232,11 @@ export function App() {
           </div>
           <div className="price-card">
             <h3>Managed Retainer</h3>
-            <p className="price">from $3,500/mo</p>
-            <p className="price-term">ongoing · we own on-call</p>
+            <p className="price">from $4,500/mo</p>
+            <p className="price-term">
+              ongoing · we own on-call ·{" "}
+              <strong>$3,500/mo for the first 3 founding-cohort clients</strong>
+            </p>
             <p className="price-desc">
               We carry the pager and own detection, fixes, and schema breakages.
               Cancel anytime — reliability you rent, not a tool you babysit.
@@ -296,7 +295,7 @@ export function App() {
         <BookingEmbed source="primary-section" />
         <p className="book-security">
           🔒 Your data never leaves your warehouse. We work with scoped,
-          revocable access — security practices built to a SOC 2 standard.
+          least-privilege access you grant and can revoke at any time.
         </p>
       </section>
 
@@ -315,11 +314,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Why not just hire a data engineer in-house?",
-    a: "A senior data-reliability engineer runs $180k+ fully loaded, takes months to hire, and is a single point of failure the moment they take vacation. Our retainer starts at $3,500/mo with a whole team behind it, real on-call coverage, and no ramp time. When you're ready to hire, we hand off cleanly — everything is version-controlled and documented.",
+    a: "A senior data-reliability engineer runs $180k+ fully loaded, takes months to hire, and is a single point of failure the moment they take vacation. Our retainer starts at $4,500/mo ($3,500/mo for the first 3 founding-cohort clients) with real on-call coverage and no ramp time. When you're ready to hire, we hand off cleanly — everything is version-controlled and documented.",
   },
   {
     q: "Do we have to rip out our current stack?",
-    a: "No. We work with your existing warehouse (Snowflake/BigQuery), ingestion, and dbt setup. The audit maps what you have; the build hardens it. We add reliability, not migration risk.",
+    a: "Not unless it's actually hurting you. The audit's first job is judging whether your current setup is the right fit — sometimes it is and we harden it, sometimes it's fighting you and we tell you honestly what to change. You get the verdict either way, no rip-and-replace by default.",
   },
   {
     q: "What does the discovery call actually cover?",
@@ -327,6 +326,6 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What's the smallest way to start?",
-    a: "The fixed-scope Reliability Audit (from $1,500, 2–4 weeks). You get a prioritized fix-list you can act on with or without us. Most teams move to a build and then a managed retainer once they see it.",
+    a: "The fixed-scope Reliability Audit ($2,500, 2–4 weeks). You get a prioritized fix-list you can act on with or without us. Most teams move to a build and then a managed retainer once they see it.",
   },
 ];
