@@ -493,25 +493,49 @@ export async function runAgentJson<T>(opts: RunOptions): Promise<{ data: T; meta
   return { data, meta };
 }
 
-/** Pull the first balanced JSON object/array out of a string. */
+/** Pull the first balanced, VALID JSON object/array out of a string. Tolerant of
+ *  prose or stray brackets (e.g. "[remedy] {...}") by trying each candidate start
+ *  and skipping ones that don't parse, rather than committing to the first bracket. */
 export function extractJson<T>(s: string): T {
   const cleaned = s.replace(/```json/gi, "").replace(/```/g, "").trim();
-  const start = cleaned.search(/[\[{]/);
-  if (start === -1) throw new Error("No JSON found in agent output:\n" + s.slice(0, 400));
-  const open = cleaned[start];
-  const close = open === "{" ? "}" : "]";
-  let depth = 0;
-  for (let i = start; i < cleaned.length; i++) {
-    if (cleaned[i] === open) depth++;
-    else if (cleaned[i] === close) {
-      depth--;
-      if (depth === 0) {
-        const slice = cleaned.slice(start, i + 1);
-        return JSON.parse(slice) as T;
+  let searchFrom = 0;
+  let lastErr: Error | null = null;
+  while (true) {
+    const rel = cleaned.slice(searchFrom).search(/[\[{]/);
+    if (rel === -1) break;
+    const start = searchFrom + rel;
+    const open = cleaned[start];
+    const close = open === "{" ? "}" : "]";
+    let depth = 0;
+    let end = -1;
+    let inStr = false;
+    let esc = false;
+    for (let i = start; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === "\\") esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      else if (ch === open) depth++;
+      else if (ch === close) {
+        depth--;
+        if (depth === 0) { end = i; break; }
       }
     }
+    if (end !== -1) {
+      const slice = cleaned.slice(start, end + 1);
+      try {
+        return JSON.parse(slice) as T;
+      } catch (e) {
+        lastErr = e as Error; // false positive (e.g. "[remedy]") — keep scanning
+      }
+    }
+    searchFrom = start + 1;
   }
-  throw new Error("Unbalanced JSON in agent output.");
+  throw new Error("No parseable JSON found in agent output:\n" + s.slice(0, 400) + (lastErr ? `\n(last parse error: ${lastErr.message})` : ""));
 }
 
 export function authBanner(cfg: ForgeConfig): void {

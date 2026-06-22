@@ -93,7 +93,7 @@ export function renderSpecDoc(spec: LoopSpec): string {
   L.push(`forge idea new "<your idea>"        # alternatively, instantiate from a typed hint`);
   L.push(`forge idea import <id>              # fold earlier findings/decisions into an existing idea`);
   L.push(`forge idea run <id>                 # walk it through stages until a gate needs you`);
-  L.push(`forge idea discuss <id> [--stage X]  # two-way conversation to iron out a stage's details`);
+  L.push(`forge idea discuss <id> [--stage X]  # two-way chat (ENTER sends, Alt+ENTER = newline); resumable`);
   L.push(`forge idea status <id>              # see stage progress + metrics`);
   L.push(`forge idea metric <id> k=v ...      # record real-world evidence (e.g. paying_clients=3)`);
   L.push(`forge idea pivot <id> <stage>       # send it back to a stage; reopen downstream`);

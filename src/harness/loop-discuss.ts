@@ -2,18 +2,25 @@
 // A turn-by-turn DISCUSSION with the framework about a specific idea — the missing
 // two-way channel. The agent holds full context (brief, operator profile/resume,
 // the current stage's intent + gate + artifacts, accumulated facts/metrics/lessons)
-// and can defend, concede, or refine its reasoning. The exchange is logged to the
-// idea's episodic memory so conclusions actually feed the stage.
+// and can defend, concede, or refine its reasoning.
 //
-// At the end (or when you type /done) the agent proposes a concrete CONCLUSION:
-// optional fact updates + an optional re-run of a stage. Per the operator's choice,
-// we ALWAYS ask before applying it — nothing changes the idea without confirmation.
+// Design notes (fixes from real use):
+//   - Conversation replies are FREE TEXT (runAgent), never forced JSON — so a chatty
+//     answer like "[remedy] ..." can't crash a JSON parser. Structured extraction of
+//     a conclusion happens ONLY when the operator types /done, and even then it is
+//     parsed defensively with a plain-text fallback.
+//   - MULTI-LINE input: type as many lines/paragraphs as you want; submit with a lone
+//     "." on its own line, or Ctrl-D. (Single Enter just adds a newline.)
+//   - PERSIST + RESUME: every turn is appended to the idea's episodic memory tagged
+//     "discuss". On restart, the prior discussion for the stage is reloaded so you
+//     continue as if uninterrupted.
 
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import { readMultiline } from "../lib/line-input.js";
 import { log } from "../lib/log.js";
 import type { ForgeConfig } from "../lib/types.js";
-import { runAgentJson } from "../lib/agent.js";
+import { runAgent, extractJson } from "../lib/agent.js";
 import { recordSpend } from "./budget.js";
 import { loadProfile } from "../agents/venture/profile.js";
 import { profileSummary } from "../lib/operator-types.js";
@@ -36,15 +43,10 @@ interface Turn {
   text: string;
 }
 
-interface DiscussReply {
-  /** The agent's conversational answer to the operator's latest message. */
-  reply: string;
-  /** When the agent believes the discussion has reached an actionable conclusion. */
-  conclusion?: {
-    summary: string; // one-line decision reached
-    factUpdates?: Record<string, unknown>; // facts to write to semantic memory
-    rerunStage?: string; // a stage id to re-open and re-run to apply the decision
-  };
+interface Conclusion {
+  summary: string;
+  factUpdates?: Record<string, unknown>;
+  rerunStage?: string;
 }
 
 function loadStageArtifacts(ideaId: string, stageId: string): string {
@@ -52,12 +54,20 @@ function loadStageArtifacts(ideaId: string, stageId: string): string {
   const chunks: string[] = [];
   for (const n of names.slice(0, 8)) {
     const p = resolve(ideaPath(ideaId), "artifacts", n);
-    if (existsSync(p)) {
-      const body = readFileSync(p, "utf8");
-      chunks.push(`### ${n}\n${body.slice(0, 4000)}`);
-    }
+    if (existsSync(p)) chunks.push(`### ${n}\n${readFileSync(p, "utf8").slice(0, 4000)}`);
   }
   return chunks.join("\n\n") || "(no artifacts yet for this stage)";
+}
+
+/** Rebuild prior discussion turns for this stage from episodic memory (resume). */
+function priorTurns(ideaId: string, stageId: string): Turn[] {
+  const turns: Turn[] = [];
+  for (const e of episodic(ideaId).all()) {
+    if (e.stage !== stageId) continue;
+    if (e.text.startsWith("operator (discuss): ")) turns.push({ role: "operator", text: e.text.slice("operator (discuss): ".length) });
+    else if (e.text.startsWith("framework (discuss): ")) turns.push({ role: "framework", text: e.text.slice("framework (discuss): ".length) });
+  }
+  return turns;
 }
 
 const SYS = `You are the venture framework discussing a decision WITH the operator — a peer
@@ -66,28 +76,42 @@ current stage's work. When the operator challenges a recommendation (e.g. "do I 
 certification given my experience?"), reason honestly and specifically against THEIR profile:
 concede when they're right, hold your ground with concrete reasoning when warranted, and quantify
 trade-offs. Prefer leveraging credentials/experience the operator ALREADY has over acquiring new
-ones, unless a buyer in this niche demonstrably requires the new credential. Be concise and direct.
-Only emit a "conclusion" when the discussion has actually resolved into a decision (the operator
-signals agreement or asks you to lock it in). Return ONLY JSON.`;
+ones, unless a buyer in this niche demonstrably requires the new credential. Be concise, direct,
+and write in plain prose (no JSON, no preamble like "[answer]"). Just talk.`;
+
+const FINALIZE_SYS = `You summarize a finished discussion into a single actionable conclusion.
+Output STRICT JSON only, no prose around it:
+{"summary":"<one-line decision reached>","factUpdates":{<facts to persist, may be empty>},"rerunStage":"<stage id to re-run to apply it, or omit>"}`;
+
+/** Read a multi-line block: ENTER submits; Option/Alt+ENTER (or trailing "\") makes
+ *  a newline. Returns null on Ctrl-C / EOF. */
+async function readBlock(promptStr: string): Promise<string | null> {
+  const r = await readMultiline(promptStr);
+  return r.text;
+}
 
 export async function discussIdea(cfg: ForgeConfig, ideaId: string, opts: { stage?: string } = {}): Promise<void> {
   const idea = loadIdea(ideaId);
-  if (!idea) {
-    log.error("discuss", `No idea "${ideaId}".`);
-    return;
-  }
+  if (!idea) { log.error("discuss", `No idea "${ideaId}".`); return; }
   const spec = loadIdeaSpec(ideaId);
   const stageId = opts.stage || idea.currentStage;
   const stage = spec.stages.find((s) => s.id === stageId);
   const profile = loadProfile();
   const profileBlock = profile ? profileSummary(profile) : "(no operator profile on file — run `forge venture profile` to derive one from the resume)";
 
-  log.raw(`\n💬 Discussing idea "${idea.hint}" — stage: ${stage?.title ?? stageId}`);
-  log.raw(`   The framework has your brief, resume-derived profile, and this stage's work in context.`);
-  log.raw(`   Type your message and press enter. Commands: /done to finish, /stage <id> to switch focus, /quit to leave without applying.\n`);
+  // RESUME: load any prior discussion for this stage.
+  const history: Turn[] = priorTurns(ideaId, stageId);
 
-  const rl = createInterface({ input, output });
-  const history: Turn[] = [];
+  log.raw(`\n💬 Discussing idea "${idea.hint}" — stage: ${stage?.title ?? stageId}`);
+  if (history.length) log.raw(`   (resumed — ${history.length} prior message(s) loaded from memory)`);
+  log.raw(`   The framework has your brief, resume-derived profile, and this stage's work in context.`);
+  log.raw(`   ENTER sends · Option/Alt+ENTER (or end a line with "\\") makes a new line · Ctrl-C to leave.`);
+  log.raw(`   Commands: /done finish & propose conclusion · /stage <id> switch · /quit leave\n`);
+
+  if (history.length) {
+    log.raw("— conversation so far —");
+    for (const t of history.slice(-6)) log.raw(`${t.role === "operator" ? "you" : "framework"} › ${t.text}\n`);
+  }
 
   const baseContext =
     `IDEA: ${idea.hint}\n` +
@@ -98,106 +122,95 @@ export async function discussIdea(cfg: ForgeConfig, ideaId: string, opts: { stag
     `CURRENT METRICS:\n${JSON.stringify(getMetrics(ideaId), null, 2)}\n\n` +
     `THIS STAGE'S ARTIFACTS:\n${stage ? loadStageArtifacts(ideaId, stageId) : "(n/a)"}\n`;
 
-  let pendingConclusion: DiscussReply["conclusion"] | undefined;
+  while (true) {
+    const msg = await readBlock("you › ");
+    if (msg === null) { log.raw("\n(left discussion) — progress is saved; resume anytime with the same command."); return; }
+    const trimmed = msg.trim();
+    if (!trimmed) continue;
 
-  try {
-    while (true) {
-      const msg = (await rl.question("you › ")).trim();
-      if (!msg) continue;
-      if (msg === "/quit") {
-        log.raw("Left the discussion. Nothing applied.");
-        return;
-      }
-      if (msg === "/stage") {
-        log.raw(`Current stage: ${stageId}. Use /stage <id>. Stages: ${spec.stages.map((s) => s.id).join(", ")}`);
-        continue;
-      }
-      if (msg.startsWith("/stage ")) {
-        const newStage = msg.slice(7).trim();
-        if (spec.stages.some((s) => s.id === newStage)) {
-          log.raw(`Switching focus to "${newStage}". (Restart discuss to reload its artifacts.)`);
-          return discussIdea(cfg, ideaId, { stage: newStage });
-        }
-        log.raw(`Unknown stage "${newStage}".`);
-        continue;
-      }
-      const finishing = msg === "/done";
-      const operatorText = finishing ? "Let's lock in what we've decided. Summarize the conclusion and what should change." : msg;
-
-      history.push({ role: "operator", text: operatorText });
-      episodic(ideaId).add(stageId, `operator (discuss): ${operatorText}`, "event");
-
-      const transcript = history.map((t) => `${t.role === "operator" ? "OPERATOR" : "FRAMEWORK"}: ${t.text}`).join("\n");
-
-      const { data, meta } = await runAgentJson<DiscussReply>({
-        cfg,
-        model: cfg.models.lead,
-        label: "loop:discuss",
-        intent: "discussing the decision with the operator",
-        systemPrompt: SYS,
-        allowedTools: ["WebSearch", "WebFetch"], // may check e.g. whether a niche's buyers demand a cert
-        prompt:
-          `${baseContext}\n\nCONVERSATION SO FAR:\n${transcript}\n\n` +
-          `Respond to the operator's latest message. ${finishing ? "The operator wants to finish — provide a conclusion." : "Only provide a conclusion if the discussion has resolved."}\n` +
-          `Return ONLY: {"reply":"<your answer>","conclusion":{"summary":"...","factUpdates":{...},"rerunStage":"<stageId or omit>"} (omit conclusion if not resolved)}`,
-      });
-      recordSpend(cfg, meta.costUsd);
-
-      const reply = data.reply ?? "(no reply)";
-      log.raw(`\nframework › ${reply}\n`);
-      history.push({ role: "framework", text: reply });
-      episodic(ideaId).add(stageId, `framework (discuss): ${reply}`, "event");
-
-      if (data.conclusion) {
-        pendingConclusion = data.conclusion;
-        log.raw(`\n— proposed conclusion —\n${data.conclusion.summary}`);
-        if (data.conclusion.factUpdates && Object.keys(data.conclusion.factUpdates).length)
-          log.raw(`facts to update: ${JSON.stringify(data.conclusion.factUpdates)}`);
-        if (data.conclusion.rerunStage) log.raw(`would re-run stage: ${data.conclusion.rerunStage}`);
-
-        // ASK before applying — per operator's chosen policy, nothing changes without confirmation.
-        const ans = (await rl.question("\nApply this conclusion and re-run? [y]es / [r]ecord only / [n]o, keep talking › ")).trim().toLowerCase();
-        if (ans === "y" || ans === "yes") {
-          await applyConclusion(cfg, ideaId, pendingConclusion, { rerun: true });
-          return;
-        } else if (ans === "r" || ans === "record") {
-          await applyConclusion(cfg, ideaId, pendingConclusion, { rerun: false });
-          return;
-        } else {
-          log.raw("Okay — keep talking. (Type /done when ready, or /quit to discard.)");
-          pendingConclusion = undefined;
-        }
-      }
-
-      if (finishing && !data.conclusion) {
-        log.raw("No actionable conclusion was reached. Type /quit to leave, or keep talking.");
-      }
+    if (trimmed === "/quit") { log.raw("Left the discussion. Conversation saved; nothing applied."); return; }
+    if (trimmed === "/help") {
+      log.raw('ENTER sends · Option/Alt+ENTER or trailing "\\" = newline · /done finish · /stage <id> switch · /quit leave');
+      continue;
     }
+    if (trimmed.startsWith("/stage")) {
+      const newStage = trimmed.slice(6).trim();
+      if (newStage && spec.stages.some((s) => s.id === newStage)) return discussIdea(cfg, ideaId, { stage: newStage });
+      log.raw(`Stages: ${spec.stages.map((s) => s.id).join(", ")}`);
+      continue;
+    }
+
+    const finishing = trimmed === "/done";
+    if (!finishing) {
+      history.push({ role: "operator", text: msg });
+      episodic(ideaId).add(stageId, `operator (discuss): ${msg}`, "event");
+    }
+
+    const transcript = history.map((t) => `${t.role === "operator" ? "OPERATOR" : "FRAMEWORK"}: ${t.text}`).join("\n");
+
+    if (finishing) {
+      // Finalize: ask for a strict-JSON conclusion, parsed defensively.
+      const res = await runAgent({
+        cfg, model: cfg.models.lead, label: "loop:discuss-finalize",
+        intent: "summarizing the discussion into a conclusion", systemPrompt: FINALIZE_SYS,
+        allowedTools: [],
+        prompt: `${baseContext}\n\nCONVERSATION:\n${transcript}\n\nProduce the conclusion JSON now.`,
+      });
+      recordSpend(cfg, res.costUsd);
+      let conclusion: Conclusion | null = null;
+      try { conclusion = extractJson<Conclusion>(res.text); } catch { /* fall back below */ }
+      if (!conclusion || !conclusion.summary) {
+        log.raw(`\nCouldn't extract a clean conclusion. The model said:\n${res.text.slice(0, 500)}\n`);
+        log.raw("Keep talking to refine, or /quit to leave it recorded as-is.");
+        continue;
+      }
+      log.raw(`\n— proposed conclusion —\n${conclusion.summary}`);
+      if (conclusion.factUpdates && Object.keys(conclusion.factUpdates).length) log.raw(`facts to update: ${JSON.stringify(conclusion.factUpdates)}`);
+      if (conclusion.rerunStage) log.raw(`would re-run stage: ${conclusion.rerunStage}`);
+      const ans = (await askLine("\nApply this conclusion? [y]es apply+rerun / [r]ecord only / [n]o keep talking › ")).trim().toLowerCase();
+      if (ans === "y" || ans === "yes") { await applyConclusion(cfg, ideaId, conclusion, { rerun: true }); return; }
+      if (ans === "r" || ans === "record") { await applyConclusion(cfg, ideaId, conclusion, { rerun: false }); return; }
+      log.raw("Okay — keep talking.");
+      continue;
+    }
+
+    // Normal conversational turn — FREE TEXT, no JSON.
+    const res = await runAgent({
+      cfg, model: cfg.models.lead, label: "loop:discuss",
+      intent: "discussing the decision with the operator", systemPrompt: SYS,
+      allowedTools: ["WebSearch", "WebFetch"],
+      prompt: `${baseContext}\n\nCONVERSATION SO FAR:\n${transcript}\n\nRespond to the operator's latest message in plain prose.`,
+    });
+    recordSpend(cfg, res.costUsd);
+    const reply = (res.text ?? "").trim() || "(no reply)";
+    log.raw(`\nframework › ${reply}\n`);
+    history.push({ role: "framework", text: reply });
+    episodic(ideaId).add(stageId, `framework (discuss): ${reply}`, "event");
+  }
+}
+
+/** A one-shot single-line prompt (for short y/r/n confirmations). */
+async function askLine(promptStr: string): Promise<string> {
+  const rl = createInterface({ input, output });
+  try {
+    return await rl.question(promptStr);
   } finally {
     rl.close();
   }
 }
 
-async function applyConclusion(
-  cfg: ForgeConfig,
-  ideaId: string,
-  conclusion: NonNullable<DiscussReply["conclusion"]>,
-  opts: { rerun: boolean },
-): Promise<void> {
-  // Record the decision as a durable fact + episodic verdict.
+async function applyConclusion(cfg: ForgeConfig, ideaId: string, conclusion: Conclusion, opts: { rerun: boolean }): Promise<void> {
   setFact(ideaId, `discussion_decision_${Date.now().toString(36)}`, conclusion.summary);
   episodic(ideaId).add(conclusion.rerunStage || "discuss", `DISCUSSION CONCLUSION: ${conclusion.summary}`, "verdict");
-
   if (conclusion.factUpdates && Object.keys(conclusion.factUpdates).length) {
     for (const [k, v] of Object.entries(conclusion.factUpdates)) setFact(ideaId, k, v);
     log.ok("discuss", `Recorded ${Object.keys(conclusion.factUpdates).length} fact update(s).`);
   }
-
   if (opts.rerun && conclusion.rerunStage) {
     log.info("discuss", `Re-opening and re-running "${conclusion.rerunStage}" to apply the decision…`);
     pivotIdea(ideaId, conclusion.rerunStage);
     await runIdeaLoop(cfg, ideaId);
   } else {
-    log.ok("discuss", "Conclusion recorded. Re-run when ready: " + `npm run forge -- idea run ${ideaId}`);
+    log.ok("discuss", `Conclusion recorded. Re-run when ready: npm run forge -- idea run ${ideaId}`);
   }
 }
