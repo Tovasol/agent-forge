@@ -28,6 +28,7 @@ import { runIdeaLoop, pivotIdea, killIdea } from "./harness/loop-executor.js";
 import { importPriorWork } from "./harness/loop-import.js";
 import { initIdeaFromBrief } from "./harness/loop-init.js";
 import { discussIdea } from "./harness/loop-discuss.js";
+import { discussTopic, reportTopics } from "./harness/loop-discuss2.js";
 import { runMetaCycle, revertSpec, specVersions } from "./harness/meta-loop.js";
 import { writeSpecDoc } from "./harness/spec-doc.js";
 import { runGrowthCycle, reportBacklog } from "./agents/grow.js";
@@ -85,7 +86,16 @@ async function main() {
     // The subcommand is the first NON-flag arg after `idea` (so `idea --import`
     // is treated as no-subcommand + a flag, not a subcommand named "--import").
     const sub = process.argv.slice(3).find((a) => !a.startsWith("--"));
-    const rest = process.argv.slice(3).filter((a) => !a.startsWith("--") && a !== sub);
+    // Values of these value-taking flags must NOT be mistaken for positional
+    // args (e.g. the idea id) when resolving `rest`.
+    const flagValues = new Set(
+      ["--topic", "--stage", "--from", "--to", "--clear"]
+        .map((f) => arg(f))
+        .filter((v): v is string => !!v && v !== "true")
+    );
+    const rest = process.argv
+      .slice(3)
+      .filter((a) => !a.startsWith("--") && a !== sub && !flagValues.has(a));
     // No subcommand, or `idea init` → bootstrap from config/brief.json (the idea
     // the operator already stated). Don't make them retype it.
     if (!sub || sub === "init") {
@@ -127,6 +137,21 @@ async function main() {
       await discussIdea(cfg, id, stageArg ? { stage: stageArg } : {});
       return;
     }
+    // Topic-scoped discussion (parallel, cost-aware): per-topic logs + a hot
+    // conclusions file. Existing `discuss` above is left untouched.
+    if (sub === "discuss2" || sub === "topic") {
+      const stageArg = arg("--stage");
+      const topicArg = arg("--topic");
+      await discussTopic(cfg, id, {
+        ...(stageArg ? { stage: stageArg } : {}),
+        ...(topicArg ? { topic: topicArg } : {}),
+      });
+      return;
+    }
+    if (sub === "topics" || sub === "discuss-topics") {
+      reportTopics(id);
+      return;
+    }
     if (sub === "step") { await runIdeaLoop(cfg, id, { singleStage: true }); return; }
     if (sub === "status") {
       const rec = loadIdea(id);
@@ -157,7 +182,7 @@ async function main() {
     }
     if (sub === "pivot") { pivotIdea(id, rest[1]); return; }
     if (sub === "kill") { killIdea(id, rest.slice(1).join(" ") || "operator kill"); return; }
-    log.error("idea", "Subcommands: new|list|run|step|status|metric|pivot|kill");
+    log.error("idea", "Subcommands: new|list|run|step|status|metric|pivot|kill|discuss|discuss2|topics");
     return;
   }
 
