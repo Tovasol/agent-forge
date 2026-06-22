@@ -1,0 +1,6 @@
+version: 1
+jobs:
+  smoke:
+    on: { push: { branches: [main] } }
+    image: alpine
+    run: sh ci/smoke.sh
