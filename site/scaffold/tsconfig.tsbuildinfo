@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/bookingembed.tsx","./src/foundercard.tsx","./src/scorecard.tsx","./src/analytics.ts","./src/config.ts","./src/main.tsx","./src/scoring.ts","./src/vite-env.d.ts","./functions/api/event.ts","./functions/api/lead.ts"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/bookingembed.tsx","./src/foundercard.tsx","./src/scorecard.tsx","./src/analytics.ts","./src/config.ts","./src/main.tsx","./src/scoring.ts","./src/vite-env.d.ts","./functions/api/lead.ts"],"version":"5.9.3"}

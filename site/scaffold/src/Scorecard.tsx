@@ -49,11 +49,19 @@ export function Scorecard() {
     }
     const next = { ...answers, [questionId]: value };
     setAnswers(next);
+    // Per-question event so Plausible Funnels can show drop-off at each step.
+    // question_number is 1-based; answered_count lets us see partial progress.
+    track("scorecard_question_answered", {
+      question_number: current + 1,
+      question_id: questionId,
+      answered_count: Object.keys(next).length,
+    });
     // Auto-advance to the next unanswered question for momentum.
     if (current < total - 1) {
       setCurrent((c) => c + 1);
     } else if (Object.keys(next).length === total) {
       track("scorecard_completed");
+      track("gate_viewed");
       setPhase("gate");
     }
   }
@@ -62,6 +70,7 @@ export function Scorecard() {
     if (!EMAIL_RE.test(email)) {
       setSubmitStatus("error");
       setSubmitMsg("Enter a valid work email to see your results.");
+      track("lead_capture_failed", { reason: "invalid_email" });
       return;
     }
     if (!result) return;
@@ -97,6 +106,7 @@ export function Scorecard() {
     } catch {
       // Don't trap the lead behind a failed network call — still reveal results,
       // but signal that the emailed copy may be delayed.
+      track("lead_capture_failed", { reason: "network", tier: result.tier });
       setSubmitStatus("error");
       setSubmitMsg(
         "We saved your score but couldn't reach the mail server — your results are below."
