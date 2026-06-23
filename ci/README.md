@@ -5,7 +5,7 @@ What runs on a push to `main` (gitolite → cicd-runner):
 | job | when | image | needs secrets |
 |---|---|---|---|
 | `smoke` | every push to `main` | `alpine` | no — liveness check |
-| `deploy-site` | push to `main` touching `site/scaffold/**`, `ci/deploy-site.sh`, or `.gitolite/ci.yml` | `node:20-bookworm-slim` | **yes** — `CLOUDFLARE_*` |
+| `deploy-site` | push to `main` touching `site/scaffold/**`, `ci/deploy-site.sh`, or `.gitolite/ci.yml` | `node:lts-bookworm-slim` | **yes** — `CLOUDFLARE_*` |
 
 `deploy-site` replicates your proven local command (run from `site/scaffold`):
 ```bash

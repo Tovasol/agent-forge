@@ -18,6 +18,6 @@ jobs:
           - "site/scaffold/**"
           - "ci/deploy-site.sh"
           - ".gitolite/ci.yml"
-    image: node:20-bookworm-slim          # glibc (not alpine/musl) — safe for wrangler
+    image: node:lts-bookworm-slim         # floating LTS (glibc); auto-tracks current LTS line.
     timeout: 900                           # cold npm ci + build + upload
     run: sh ci/deploy-site.sh
