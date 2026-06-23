@@ -19,6 +19,15 @@ set -eu
 PROJECT=pipelineforge-site
 SITE_DIR=site/scaffold
 
+# explicit failure notification (nicer than the runner's generic backstop). Fires on
+# any non-zero exit; the runner flushes the outbox after the container exits.
+on_exit() {
+  rc=$?
+  [ "$rc" -ne 0 ] && notify_error "deploy-site FAILED (rc=$rc) — $PROJECT $CI_BRANCH @ ${CI_SHA}"
+  return "$rc"
+}
+trap on_exit EXIT
+
 # Fail loud + early if creds are missing (clearer than a wrangler auth error).
 : "${CLOUDFLARE_API_TOKEN:?missing — add to ci/secrets.enc.yaml (see ci/README.md), then unlock-ci}"
 : "${CLOUDFLARE_ACCOUNT_ID:?missing — add to ci/secrets.enc.yaml (see ci/README.md)}"
