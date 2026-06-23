@@ -1,6 +1,23 @@
 version: 1
 jobs:
+  # liveness check — every push to main, no secrets. Proves the pipeline is alive.
   smoke:
     on: { push: { branches: [main] } }
     image: alpine
     run: sh ci/smoke.sh
+
+  # build + deploy the Cloudflare Pages site (site/scaffold). Fires only when the
+  # site, its deploy script, or this manifest changes — not on unrelated commits.
+  # Self-contained: deps are produced by `npm ci` in the container (wrangler need
+  # not exist on the runner). Needs CLOUDFLARE_* secrets (ci/secrets.enc.yaml).
+  deploy-site:
+    on:
+      push:
+        branches: [main]
+        paths:
+          - "site/scaffold/**"
+          - "ci/deploy-site.sh"
+          - ".gitolite/ci.yml"
+    image: node:20-bookworm-slim          # glibc (not alpine/musl) — safe for wrangler
+    timeout: 900                           # cold npm ci + build + upload
+    run: sh ci/deploy-site.sh
