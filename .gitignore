@@ -30,9 +30,5 @@ context/*
 # ── Agent Forge safety (auto-added): protect secrets, skip noise ──
 site/scaffold/node_modules/
 
-# ── CI runner: generated, never commit ──
-# (gitignore has NO inline comments — a pattern must be alone on its line)
-# test report, regenerated each run by cicd-runner/test/run.sh:
-cicd-runner/test/report.ndjson
 # TypeScript incremental build cache:
 *.tsbuildinfo

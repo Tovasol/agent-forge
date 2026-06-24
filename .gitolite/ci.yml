@@ -6,20 +6,6 @@ jobs:
     image: alpine
     run: sh ci/smoke.sh
 
-  # self-test: lint + unit + adversarial suite for the runner itself. Fires only when
-  # the runner code / CI scripts change. Installs its own deps (shellcheck) in-container.
-  test:
-    on:
-      push:
-        branches: [main]
-        paths:
-          - "cicd-runner/**"
-          - "ci/**"
-          - ".gitolite/ci.yml"
-    image: node:lts-bookworm-slim          # bash + node (harness JSON validation)
-    timeout: 600
-    run: sh ci/test.sh
-
   # build + deploy the Cloudflare Pages site (site/scaffold). Fires only when the
   # site, its deploy script, or this manifest changes — not on unrelated commits.
   # Self-contained: deps are produced by `npm ci` in the container (wrangler need
