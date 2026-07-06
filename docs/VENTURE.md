@@ -33,7 +33,7 @@ npm run venture:context     # scan context/ and (re)build your operator profile
 npm run venture:profile     # show the current profile
 ```
 
-`context/README.md` and `context/assets.example.txt` explain the format. The profile is built automatically when you launch, and threaded into every stage — so the niche, offer, GTM, and build all lean on your real skills and the tools you already pay for. (Describe assets; don't paste passwords or secrets.)
+[context/README.md](../context/README.md) and [context/assets.example.txt](../context/assets.example.txt) explain the format. The profile is built automatically when you launch, and threaded into every stage — so the niche, offer, GTM, and build all lean on your real skills and the tools you already pay for. (Describe assets; don't paste passwords or secrets.)
 
 ## What success depends on (the requirements ledger)
 

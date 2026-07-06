@@ -58,10 +58,10 @@ Each `grow` cycle writes a concrete artifact under `memory/growth/artifacts/` �
 
 ## Honest expectations
 
-For a high-trust technical service, **your** credibility books the calls. The agent can do ~70–80% of the *hours* (research, drafting, scheduling, measurement), but the ~20% that creates relationships — showing up in communities, posting in your voice, sending the outreach, taking the call — is yours and can't be delegated without the brand feeling machine-generated. Realistic time to first qualified calls is roughly one to three months, driven mostly by founder-led content and community presence rather than cold outbound. The framework is built to make that 80% effortless and to keep the 20% firmly in your hands. See `docs/CAPABILITIES.md`.
+For a high-trust technical service, **your** credibility books the calls. The agent can do ~70–80% of the *hours* (research, drafting, scheduling, measurement), but the ~20% that creates relationships — showing up in communities, posting in your voice, sending the outreach, taking the call — is yours and can't be delegated without the brand feeling machine-generated. Realistic time to first qualified calls is roughly one to three months, driven mostly by founder-led content and community presence rather than cold outbound. The framework is built to make that 80% effortless and to keep the 20% firmly in your hands. See [docs/CAPABILITIES.md](CAPABILITIES.md).
 
 ## Scheduling it for real
 
 `npm run watch` is fine for a always-on machine. For production cadence on your stack, run `npm run grow` from a scheduler:
 - **cron** (a small always-on box): `0 9 * * * cd /path/to/agent-forge && npm run grow`
-- **Cloudflare Cron Triggers**: call a Worker that triggers a `grow` run (see the research notes in `docs/ARCHITECTURE.md`). Keep runs idempotent and respect the budget cap.
+- **Cloudflare Cron Triggers**: call a Worker that triggers a `grow` run (see the research notes in [docs/ARCHITECTURE.md](ARCHITECTURE.md)). Keep runs idempotent and respect the budget cap.
