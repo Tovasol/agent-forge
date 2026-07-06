@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Verified false positives (manually reviewed): localStorage key name, not a secret."
+regexes = [
+  '''pf_attribution_v1''',
+]
